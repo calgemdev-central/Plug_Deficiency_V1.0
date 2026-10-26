@@ -94,7 +94,7 @@ table.t tfoot td{font-weight:600;border-top:1.5px solid var(--ink);border-bottom
     <button type="button" id="btnImport">Import JSON</button><input type="file" id="jsonFile" accept=".json,application/json" hidden>
     <button type="button" id="btnPrint">Print / PDF</button>
   </div>
-  <div class="datastat noprint"><span id="dataStat">Loading well list…</span> <button type="button" id="csvPick">Load CSV</button><input type="file" id="csvFile" accept=".csv,text/csv" hidden></div>
+  <div class="datastat noprint"><span id="dataStat">Loading well list…</span> <button type="button" id="csvPick" title="Load an AllWells CSV export (or a slim .tsv.gz) from your computer">Load CSV</button><button type="button" id="slimSave" hidden title="Download the compressed well list to upload to the repository's data folder">Save slim file for GitHub</button><input type="file" id="csvFile" accept=".csv,.tsv,.gz,text/csv" hidden></div>
 </header>
 
 <div class="grid">
@@ -214,13 +214,25 @@ function csvRows(text,onRow){ let i=0,n=text.length,row=[],f='',q=false;
     if(c==='\n'||c==='\r'){ if(c==='\r'&&text[i+1]==='\n') i++; row.push(f); onRow(row); row=[]; f=''; i++; continue; }
     f+=c; i++; }
   if(f!==''||row.length){ row.push(f); onRow(row); } }
-async function buildFromText(text,label){
-  const chunks={}, opCount={}, opCodes={}; let hdr=null, idx=null, n=0;
-  csvRows(text,row=>{ if(!hdr){ hdr=row.map(h=>h.trim().replace(/^﻿/,'')); idx=WF.map(k=>hdr.indexOf(k)); return; }
-    const v=idx.map(j=>j>=0?(row[j]||'').trim():''); const a8=normAPI(v[0]); if(!a8) return;
+function tableRows(text,onRow){ // tab-separated (slim file) or quoted CSV (raw AllWells export)
+  const nl=text.indexOf('\n'), first=text.slice(0,nl<0?text.length:nl);
+  if(!first.includes('\t')) return csvRows(text,onRow);
+  let i=0; while(i<text.length){ let j=text.indexOf('\n',i); if(j<0) j=text.length; const line=text.slice(i,j).replace(/\r$/,''); if(line) onRow(line.split('\t')); i=j+1; } }
+async function bytesToText(buf){ const u=new Uint8Array(buf);
+  if(u[0]===0x1f&&u[1]===0x8b){ // gzip: decompress in the browser
+    if(!('DecompressionStream' in window)) throw new Error('this browser cannot unzip .gz files; use Chrome or Edge');
+    return await new Response(new Blob([u]).stream().pipeThrough(new DecompressionStream('gzip'))).text(); }
+  return new TextDecoder().decode(u); }
+let SLIM=null; // slim TSV text from the last CSV loaded by hand, for "Save slim file"
+async function buildFromText(text,label,keepSlim=false){
+  const chunks={}, opCount={}, opCodes={}, slim=keepSlim?[WF.join('\t')]:null; let hdr=null, idx=null, n=0;
+  tableRows(text,row=>{ if(!hdr){ hdr=row.map(h=>h.trim().replace(/^﻿/,'')); idx=WF.map(k=>hdr.indexOf(k)); if(idx[0]<0) throw new Error('no API column'); return; }
+    const v=idx.map(j=>j>=0?(row[j]||'').trim().replace(/[\t\r\n]+/g,' '):''); const a8=normAPI(v[0]); if(!a8) return;
     const key='c'+a8.slice(0,4); (chunks[key]||(chunks[key]={}))[a8]=v.slice(1); n++;
+    if(slim){ const w=v.slice(); for(const c of [15,16]) if(w[c]){ const x=+w[c]; if(isFinite(x)) w[c]=String(+x.toFixed(6)); } if(w[17]) w[17]=w[17].split(/[ T]/)[0]; slim.push(w.join('\t')); }
     const op=v[6]; if(op){ opCount[op]=(opCount[op]||0)+1; if(v[5]) (opCodes[op]||(opCodes[op]=new Set())).add(v[5]); } });
   if (!n) throw new Error('no API rows found');
+  if(slim) SLIM={text:slim.join('\n')+'\n',name:'wells_'+((label.match(/(\d{8})/)||[])[1]||new Date().toISOString().slice(0,10).replace(/-/g,''))+'.tsv.gz'};
   const groups={}; for (const op in opCount){ const k=op.toLowerCase().replace(/[.,]/g,' ').replace(/\s+/g,' ').trim(); (groups[k]||(groups[k]=[])).push(op); }
   const ops=Object.values(groups).map(g=>g.sort((a,b)=>opCount[b]-opCount[a])[0]).sort((a,b)=>a.localeCompare(b));
   const codes={}; for (const op in opCodes) codes[op]=[...opCodes[op]];
@@ -230,16 +242,20 @@ let DATA={ready:false,ops:[],codes:{},fields:WF.slice(1)};
 async function loadWellList(){
   const st=$('dataStat'); let manifest=null;
   try{ const r=await fetch('data/manifest.json',{cache:'no-cache'}); if(r.ok) manifest=await r.json(); }catch(e){}
-  const meta=await idbGet('meta');
-  if (meta && (!manifest || meta.label===manifest.csv)){ await useCached(meta); return; }
-  if (!manifest){ if(meta) await useCached(meta); else st.innerHTML='<span class="bad">Well list not found.</span>'; return; }
-  try{ st.textContent=`Downloading ${manifest.csv}…`;
-    const r=await fetch('data/'+manifest.csv); if(!r.ok) throw new Error('HTTP '+r.status);
+  const file=manifest&&(manifest.file||manifest.csv), meta=await idbGet('meta');
+  if (meta && (!file || meta.label===file)){ await useCached(meta); return; }
+  if (!file){ if(meta) await useCached(meta); else st.innerHTML='<span class="bad">Well list not found.</span>'; return; }
+  try{ st.textContent=`Downloading ${file}…`;
+    const r=await fetch('data/'+file); if(!r.ok) throw new Error('HTTP '+r.status);
     const total=+r.headers.get('content-length')||0, reader=r.body.getReader(), parts=[]; let got=0;
-    for(;;){ const {done,value}=await reader.read(); if(done) break; parts.push(value); got+=value.length; st.textContent=`Well list ${(got/1e6).toFixed(0)}${total?`/${(total/1e6).toFixed(0)}`:''} MB…`; }
+    for(;;){ const {done,value}=await reader.read(); if(done) break; parts.push(value); got+=value.length; st.textContent=`Well list ${(got/1e6).toFixed(1)}${total?`/${(total/1e6).toFixed(1)}`:''} MB…`; }
     st.textContent='Indexing wells…'; await new Promise(r=>setTimeout(r,20));
-    await useCached(await buildFromText(new TextDecoder().decode(await new Blob(parts).arrayBuffer()),manifest.csv));
-  }catch(e){ st.innerHTML=`<span class="bad">Could not download the well list (${esc(e.message)}).</span>`; if(meta) await useCached(meta); } }
+    await useCached(await buildFromText(await bytesToText(await new Blob(parts).arrayBuffer()),file));
+  }catch(e){ st.innerHTML=`<span class="bad">Could not load the well list (${esc(e.message)}).</span>`; if(meta) await useCached(meta); } }
+async function saveSlim(){ if(!SLIM) return; const b=$('slimSave'); b.textContent='Compressing…';
+  try{ const blob=await new Response(new Blob([SLIM.text]).stream().pipeThrough(new CompressionStream('gzip'))).blob();
+    const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=SLIM.name; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+    b.textContent=`Saved ${SLIM.name} (${(blob.size/1e6).toFixed(1)} MB)`; }catch(e){ b.textContent='Could not compress: '+e.message; } }
 async function useCached(meta){
   DATA.ops=(await idbGet('ops'))||[]; DATA.codes=(await idbGet('codes'))||{}; DATA.fields=(await idbGet('fields'))||WF.slice(1); DATA.ready=true;
   $('opsList').innerHTML=DATA.ops.map(o=>`<option value="${esc(o)}">`).join('');
@@ -500,8 +516,8 @@ function bind(){
   $('btnImport').onclick=()=>$('jsonFile').click();
   $('jsonFile').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; try{ S=Object.assign(blank(),JSON.parse(await f.text())); save(); rerender(); lookup(S.api); }catch(err){ $('dataStat').textContent='Could not import: '+err.message; } e.target.value=''; };
   $('btnPrint').onclick=()=>window.print();
-  $('csvPick').onclick=()=>$('csvFile').click();
-  $('csvFile').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; $('dataStat').textContent=`Reading ${f.name}…`; try{ await useCached(await buildFromText(await f.text(),f.name)); }catch(err){ $('dataStat').innerHTML=`<span class="bad">Could not read ${esc(f.name)}: ${esc(err.message)}</span>`; } e.target.value=''; };
+  $('csvPick').onclick=()=>$('csvFile').click(); $('slimSave').onclick=saveSlim;
+  $('csvFile').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; $('dataStat').textContent=`Reading ${f.name}…`; try{ const isCsv=!/\.gz$/i.test(f.name); await useCached(await buildFromText(await bytesToText(await f.arrayBuffer()),f.name,isCsv)); $('slimSave').hidden=!isCsv; if(isCsv) $('slimSave').textContent='Save slim file for GitHub'; }catch(err){ $('dataStat').innerHTML=`<span class="bad">Could not read ${esc(f.name)}: ${esc(err.message)}</span>`; } e.target.value=''; };
   const drop=$('drop'), pf=$('pdfFile');
   drop.onclick=()=>pf.click(); drop.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); pf.click(); } };
   pf.onchange=()=>{ if(pf.files[0]) readPermit(pf.files[0]); pf.value=''; };
