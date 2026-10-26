@@ -1,0 +1,517 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Plug Volume Review</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<style>
+/* One plug, one page: compact well strip on top, plug sheet on the left, wellbore diagram pinned on the right. */
+:root{
+  --bg:#eceff0; --surface:#fff; --surface-2:#f5f7f8; --ink:#192227; --muted:#5a6870; --line:#d3d9dc;
+  --accent:#0d6a87; --accent-soft:#dfeef3; --ok:#2a7348; --ok-soft:#e1f1e7; --warn:#9a5b06; --warn-soft:#fbefd9; --bad:#a3302a; --bad-soft:#f8e3e1;
+  --form:#d8cfbf; --mud:#f6f8f9; --mudspacer:#b9a98a; --plug:#8f989e; --theo:#0d6a87; --req:#a3302a; --zone:#8a4f9e;
+  --display:"Archivo","Arial Narrow",system-ui,sans-serif; --body:"Archivo",system-ui,-apple-system,"Segoe UI",sans-serif; --mono:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace;
+}
+@media (prefers-color-scheme: dark){:root{
+  --bg:#11171a; --surface:#192125; --surface-2:#1f282d; --ink:#e3e9eb; --muted:#93a2aa; --line:#2d393f;
+  --accent:#5cb6d3; --accent-soft:#163440; --ok:#6cc48f; --ok-soft:#15301f; --warn:#e2a34b; --warn-soft:#3a2b12; --bad:#ec8a82; --bad-soft:#3b1b19;
+  --form:#3b352c; --mud:#1b2328; --mudspacer:#6b5f49; --plug:#aab3b8; --theo:#5cb6d3; --req:#ec8a82; --zone:#c79ad9; color-scheme:dark}}
+*{box-sizing:border-box} html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:13px;line-height:1.35}
+[hidden]{display:none!important}
+.wrap{max-width:1480px;margin:0 auto;padding:8px max(12px,env(safe-area-inset-right,0px)) 24px max(12px,env(safe-area-inset-left,0px))}
+header.top{display:flex;flex-wrap:wrap;gap:4px 14px;align-items:center;justify-content:space-between;border-bottom:2px solid var(--ink);padding-bottom:5px;margin-bottom:8px}
+h1{font-family:var(--display);font-stretch:80%;font-weight:750;font-size:21px;margin:0}
+.bar{display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.datastat{font-size:11.5px;color:var(--muted)}
+.grid{display:grid;grid-template-columns:minmax(0,1.45fr) minmax(0,1fr);gap:10px;align-items:start}
+@media (max-width:1050px){.grid{grid-template-columns:minmax(0,1fr)} .side{position:static!important}}
+.stack{display:flex;flex-direction:column;gap:7px;min-width:0}
+section.panel{background:var(--surface);border:1px solid var(--line);border-radius:6px;padding:7px 10px;min-width:0}
+h2{font-family:var(--display);font-stretch:85%;font-size:14px;font-weight:700;margin:0 0 5px;display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+h2 .hint{font-family:var(--body);font-size:11px;color:var(--muted);font-weight:400}
+.g{display:grid;gap:4px 6px;align-items:end}
+.g8{grid-template-columns:repeat(8,minmax(0,1fr))}
+@media (max-width:700px){.g8{grid-template-columns:repeat(4,minmax(0,1fr))}}
+.s2{grid-column:span 2}.s3{grid-column:span 3}
+@media (max-width:700px){.s3{grid-column:span 4}}
+.f{display:flex;flex-direction:column;gap:1px;font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600;min-width:0}
+input,select,textarea,button{font:inherit;color:var(--ink)}
+input,select,textarea{background:var(--surface);border:1px solid var(--line);border-radius:4px;padding:1px 6px;min-width:0;width:100%;font-size:12.5px;text-transform:none;letter-spacing:0;font-weight:400}
+input,select{height:24px}
+input[type=number]{font-family:var(--mono)}
+input:focus-visible,select:focus-visible,textarea:focus-visible,button:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+textarea{resize:vertical;line-height:1.35;padding:3px 6px}
+button{cursor:pointer;border:1px solid var(--line);background:var(--surface);border-radius:4px;padding:2px 8px;font-size:12px}
+button:hover{border-color:var(--accent)} button.x{padding:0 6px;color:var(--muted)}
+.info{font-size:11.5px;color:var(--muted);margin-top:4px}
+.info b{color:var(--ink);font-weight:600}
+.bad{color:var(--bad)} .okc{color:var(--ok)}
+.chip{display:inline-block;font-family:var(--mono);font-size:10.5px;font-weight:600;padding:0 6px;border-radius:999px;background:var(--surface-2);border:1px solid var(--line);line-height:17px}
+.chip.yes{background:var(--bad-soft);color:var(--bad);border-color:transparent} .chip.no{background:var(--ok-soft);color:var(--ok);border-color:transparent} .chip.unc{background:var(--warn-soft);color:var(--warn);border-color:transparent}
+.drop{border:1.5px dashed var(--line);border-radius:5px;padding:5px 8px;font-size:12px;color:var(--muted);cursor:pointer;display:flex;gap:8px;align-items:center}
+.drop.over,.drop:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.kv{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:2px 10px;font-size:12px;margin-top:5px}
+@media (max-width:700px){.kv{grid-template-columns:auto 1fr}}
+.kv dt{color:var(--muted);white-space:nowrap} .kv dd{margin:0;min-width:0}
+table.t{width:100%;border-collapse:collapse;table-layout:fixed}
+table.t th{font-size:9.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600;text-align:left;padding:2px 3px;background:var(--surface-2);border-bottom:1px solid var(--line);vertical-align:bottom}
+table.t td{padding:2px 3px;border-bottom:1px solid var(--line);vertical-align:middle;overflow:hidden}
+table.t td input,table.t td select{height:22px}
+table.t td.o{font-family:var(--mono);font-size:12px;text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+table.t tfoot td{font-weight:600;border-top:1.5px solid var(--ink);border-bottom:none}
+.scroll{overflow-x:auto;min-width:0}
+.kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:1px;background:var(--line);border:1px solid var(--line);border-radius:6px;overflow:hidden;margin-top:6px}
+@media (max-width:700px){.kpis{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.kpi{background:var(--surface);padding:6px 8px;min-width:0}
+.kpi .l{font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+.kpi .v{font-family:var(--mono);font-size:20px;font-weight:600;line-height:1.15;font-variant-numeric:tabular-nums}
+.kpi .s{font-size:11px;color:var(--muted);font-family:var(--mono)}
+.kpi.bad{background:var(--bad-soft)} .kpi.bad .v{color:var(--bad)} .kpi.ok .v{color:var(--ok)}
+.calc{font-family:var(--mono);font-size:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:5px;padding:6px 8px;margin-top:6px;white-space:pre-wrap;line-height:1.5}
+.findings{font-size:12px;margin-top:6px;display:flex;flex-direction:column;gap:2px}
+.findings div{padding-left:14px;position:relative} .findings div::before{content:"›";position:absolute;left:3px;color:var(--accent)}
+.findings .b{color:var(--bad)} .findings .w{color:var(--warn)}
+.placeholder{border:1px dashed var(--line);border-radius:5px;padding:6px 8px;font-size:12px;color:var(--muted);background:var(--surface-2)}
+.side{position:sticky;top:6px}
+.legend{display:flex;flex-wrap:wrap;gap:3px 10px;font-size:10.5px;color:var(--muted);margin-top:4px}
+.legend i{display:inline-block;width:11px;height:11px;border:1px solid var(--line);margin-right:4px;vertical-align:-2px}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:4px;overflow:hidden} .seg button{border:none;border-radius:0;padding:1px 8px;font-size:11.5px} .seg button[aria-pressed="true"]{background:var(--accent);color:#fff}
+@media print{ body{background:#fff;font-size:12px} .noprint{display:none!important} .grid{grid-template-columns:1.4fr 1fr} section.panel{break-inside:avoid} .side{position:static} }
+</style>
+</head>
+<body>
+<div class="wrap">
+<header class="top">
+  <h1>Plug Volume Review</h1>
+  <div class="bar noprint">
+    <button type="button" id="btnNew">New</button>
+    <button type="button" id="btnExample">Example (04-029-16337)</button>
+    <button type="button" id="btnCopy">Copy summary</button>
+    <button type="button" id="btnExport">Export JSON</button>
+    <button type="button" id="btnImport">Import JSON</button><input type="file" id="jsonFile" accept=".json,application/json" hidden>
+    <button type="button" id="btnPrint">Print / PDF</button>
+  </div>
+  <div class="datastat noprint"><span id="dataStat">Loading well list…</span> <button type="button" id="csvPick">Load CSV</button><input type="file" id="csvFile" accept=".csv,text/csv" hidden></div>
+</header>
+
+<div class="grid">
+<div class="stack">
+  <section class="panel">
+    <div class="g g8">
+      <label class="f s2">API No.<input id="api" data-k="api" placeholder="04-029-16337 or 02916337" autocomplete="off"></label>
+      <label class="f">Permit No.<input data-k="permitNo"></label>
+      <label class="f s3">Operator<input data-k="operator" list="opsList" autocomplete="off" placeholder="search operators"></label>
+      <label class="f">HPZ<select data-k="hpz"><option></option><option>Yes</option><option>No</option><option>Uncertain</option></select></label>
+      <label class="f">Date<input type="date" data-k="date"></label>
+      <label class="f s2">Lease<input data-k="lease"></label>
+      <label class="f">Well No.<input data-k="wellNo"></label>
+      <label class="f s2">Field<input data-k="field"></label>
+      <label class="f">County<input data-k="county"></label>
+      <label class="f">Sec-T-R<input data-k="str" placeholder="09-28S-27E"></label>
+    </div>
+    <div class="info" id="wellInfo"></div>
+    <datalist id="opsList"></datalist>
+  </section>
+
+  <section class="panel">
+    <div class="drop noprint" id="drop" tabindex="0" role="button" aria-label="Choose or drop permit PDF"><b>Permit</b><span id="dropTxt">Drop the Permit to Conduct Well Operations PDF here, or click to choose</span></div>
+    <input type="file" id="pdfFile" accept="application/pdf" hidden>
+    <div id="permitOut"></div>
+    <label class="f" style="margin-top:5px">Squeeze information from permit<textarea id="sqzBox" rows="1" data-k="sqzText"></textarea></label>
+  </section>
+
+  <section class="panel">
+    <h2>Plug</h2>
+    <div class="g g8">
+      <label class="f s3">Plug tag type<select data-k="type">
+        <option>Bottom / hydrocarbon plug (covers perfs)</option><option>USDW / base of fresh water plug</option><option>Zone isolation plug</option><option>Surface plug</option><option>Other</option></select></label>
+      <label class="f s2">Placed with<select data-k="method"><option>Coiled tubing (CT)</option><option>Tubing</option><option>Drill pipe</option><option>Dump bailer</option><option>Bullhead / squeeze</option><option>Other</option></select></label>
+      <label class="f s3">Zone / description<input data-k="desc" placeholder="e.g. Etchegoin 2352', Chanac 2469'"></label>
+      <label class="f">Bottom, ft<input type="number" step="1" data-k="bot"></label>
+      <label class="f">Permit TOC, ft<input type="number" step="1" data-k="reqTop" title="Required top of this plug; filled from the permit"></label>
+      <label class="f">Tagged TOC, ft<input type="number" step="1" data-k="tag"></label>
+      <label class="f">Pumped, ft³<input type="number" step="0.01" data-k="vol"></label>
+      <div class="f">(bbl)<div id="volBbl" style="font-family:var(--mono);font-size:12.5px;padding:3px 0;text-transform:none;color:var(--ink)">–</div></div>
+      <label class="f">Tagged with<select data-k="tagBy"><option>CT / tubing</option><option>Wireline</option><option>Sand line</option><option>Visual</option><option>Reported</option></select></label>
+      <label class="f">Weight on tag<input data-k="tagWt" placeholder="e.g. 5 klb"></label>
+      <label class="f">Witnessed by<input data-k="witness"></label>
+    </div>
+
+    <div class="bar" style="margin:6px 0 2px;justify-content:space-between">
+      <b style="font-size:12px">Pipe across the plug <span class="info" style="font-weight:400">bottom section first · calculation depths</span></b>
+      <span class="bar"><span class="info" style="margin:0">ID from</span><span class="seg" role="group" aria-label="ID source"><button type="button" data-ids="formula">√(OD² − W/2.667)</button><button type="button" data-ids="table">CWC table</button></span></span>
+    </div>
+    <div class="scroll"><table class="t" id="secTbl" style="min-width:560px"></table></div>
+    <div class="bar noprint" style="margin-top:3px"><button type="button" id="addSec">+ Section</button><span class="info" style="margin:0" id="secNote"></span></div>
+
+    <div class="kpis" id="kpis"></div>
+    <div class="calc" id="calcText"></div>
+    <div class="findings" id="findings"></div>
+  </section>
+
+  <section class="panel">
+    <h2>Assessment</h2>
+    <div class="placeholder">Risk matrix: allowable % deficient or over by plug type, HPZ, critical well, H₂S, and mud spacer vs cement all the way; then a pass / fail recommendation.</div>
+  </section>
+
+  <section class="panel">
+    <h2>Notes</h2>
+    <textarea rows="3" data-k="notes"></textarea>
+  </section>
+</div>
+
+<div class="side stack">
+  <section class="panel">
+    <h2>Wellbore <span class="hint" id="diagHint"></span><span class="seg noprint" style="margin-left:auto" role="group" aria-label="Diagram range"><button type="button" data-zoom="plug">Plug</button><button type="button" data-zoom="well">Whole well</button></span></h2>
+    <div id="wbd"></div>
+    <div class="legend" id="legend"></div>
+  </section>
+</div>
+</div>
+</div>
+
+<script>
+/* ---------------- constants & formulas ---------------- */
+const CASING=[ // CWC Technical Data Book pp. 47–48
+ ['2⅜',2.375,[[4.7,1.995]]],['2⅞',2.875,[[6.5,2.441]]],['3½',3.5,[[9.3,2.992]]],
+ ['4½',4.5,[[9.5,4.090],[11.6,4.000],[13.5,3.920],[15.1,3.826]]],['5',5,[[11.5,4.560],[13.0,4.494],[15.0,4.408],[18.0,4.276]]],
+ ['5½',5.5,[[14.0,5.012],[15.5,4.950],[17.0,4.892],[20.0,4.778],[23.0,4.670]]],['6⅝',6.625,[[20.0,6.049],[24.0,5.921],[28.0,5.791]]],
+ ['7',7,[[20.0,6.456],[23.0,6.366],[26.0,6.276],[29.0,6.184],[32.0,6.094],[35.0,6.004]]],['7⅝',7.625,[[26.4,6.969],[29.7,6.875],[33.7,6.765],[39.0,6.624]]],
+ ['8⅝',8.625,[[24.0,8.098],[32.0,7.921],[36.0,7.825],[40.0,7.725]]],['9⅝',9.625,[[36.0,8.921],[40.0,8.835],[43.5,8.755],[47.0,8.681],[53.5,8.535]]],
+ ['10¾',10.75,[[40.5,10.050],[45.5,9.950],[51.0,9.850],[55.5,9.760],[60.7,9.660],[65.7,9.560],[71.1,9.450],[76.0,9.350],[81.0,9.250]]],
+ ['11¾',11.75,[[47.0,11.000],[54.0,10.880],[60.0,10.772]]],['13⅜',13.375,[[48.0,12.715],[54.5,12.615],[61.0,12.515],[68.0,12.415],[72.0,12.347],[77.0,12.275],[85.0,12.159]]],
+ ['16',16,[[65.0,15.250],[75.0,15.124],[84.0,15.010],[109.0,14.688],[118.0,14.570]]],['18⅝',18.625,[[87.5,17.755],[109.0,17.491],[122.0,17.385]]],['20',20,[[94.0,19.124],[106.5,19.000],[133.0,18.730]]]];
+const idFormula=(od,w)=>{ const v=od*od-w/2.667; return v>0?Math.sqrt(v):NaN; };     // ID = √(OD² − W/2.667)
+const bookID=(od,w)=>{ const c=CASING.find(c=>Math.abs(c[1]-od)<1e-6); const r=c&&c[2].find(r=>Math.abs(r[0]-w)<1e-6); return r?r[1]:null; };
+const cfPerFt=id=>id*id/1029.4*5.615;                                                   // ft³/ft = ID²/1029.4 × 5.615
+const CF_BBL=5.615;
+const HPZ_MAP={'Verified HPZ':'Yes','Potentially HPZ':'Yes','Not Within HPZ':'No','Potentially Not Within HPZ':'No','Uncertainty Area':'Uncertain'};
+const WF=['API','LeaseName','WellNumber','WellStatus','WellTypeLa','OperatorCo','OperatorNa','FieldName','AreaName','CountyName','District','Section','Township','Range','BaseMeridi','Latitude','Longitude','SpudDate','isDirectio','inHPZ'];
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const num=v=>{ const x=parseFloat(String(v??'').replace(/,/g,'')); return isFinite(x)?x:null; };
+const f0=x=>x==null||!isFinite(x)?'–':Math.round(x).toLocaleString('en-US');
+const f2=(x,d=2)=>x==null||!isFinite(x)?'–':Number(x).toLocaleString('en-US',{minimumFractionDigits:d,maximumFractionDigits:d});
+const odTxt=v=>String(+(+v).toFixed(3));
+function normAPI(s){ const d=String(s||'').replace(/\D/g,''); if(!d) return null;
+  if (d.length===8) return d; if (d.length===7) return '0'+d;
+  if ((d.length===10||d.length===12||d.length===14)&&d.startsWith('04')) return d.slice(2,10);
+  if ((d.length===9||d.length===11||d.length===13)&&d.startsWith('4')) return d.slice(1,9);
+  return null; }
+const fmtAPI=a8=>a8?`04-${a8.slice(0,3)}-${a8.slice(3)}`:'';
+
+/* ---------------- well list (CSV in /data → IndexedDB cache) ---------------- */
+function idb(){ return new Promise((res,rej)=>{ try{ const r=indexedDB.open('plug-review-wells',1); r.onupgradeneeded=()=>r.result.createObjectStore('kv'); r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);}catch(e){rej(e);} }); }
+async function idbGet(k){ try{ const db=await idb(); return await new Promise(res=>{ const q=db.transaction('kv').objectStore('kv').get(k); q.onsuccess=()=>res(q.result??null); q.onerror=()=>res(null); }); }catch(e){ return null; } }
+async function idbPut(obj){ const db=await idb(); return new Promise((res,rej)=>{ const tx=db.transaction('kv','readwrite'), st=tx.objectStore('kv'); for (const k in obj) st.put(obj[k],k); tx.oncomplete=res; tx.onerror=()=>rej(tx.error); }); }
+function csvRows(text,onRow){ let i=0,n=text.length,row=[],f='',q=false;
+  while(i<n){ const c=text[i];
+    if(q){ if(c==='"'){ if(text[i+1]==='"'){ f+='"'; i+=2; continue; } q=false; i++; continue; } f+=c; i++; continue; }
+    if(c==='"'){ q=true; i++; continue; } if(c===','){ row.push(f); f=''; i++; continue; }
+    if(c==='\n'||c==='\r'){ if(c==='\r'&&text[i+1]==='\n') i++; row.push(f); onRow(row); row=[]; f=''; i++; continue; }
+    f+=c; i++; }
+  if(f!==''||row.length){ row.push(f); onRow(row); } }
+async function buildFromText(text,label){
+  const chunks={}, opCount={}, opCodes={}; let hdr=null, idx=null, n=0;
+  csvRows(text,row=>{ if(!hdr){ hdr=row.map(h=>h.trim().replace(/^﻿/,'')); idx=WF.map(k=>hdr.indexOf(k)); return; }
+    const v=idx.map(j=>j>=0?(row[j]||'').trim():''); const a8=normAPI(v[0]); if(!a8) return;
+    const key='c'+a8.slice(0,4); (chunks[key]||(chunks[key]={}))[a8]=v.slice(1); n++;
+    const op=v[6]; if(op){ opCount[op]=(opCount[op]||0)+1; if(v[5]) (opCodes[op]||(opCodes[op]=new Set())).add(v[5]); } });
+  if (!n) throw new Error('no API rows found');
+  const groups={}; for (const op in opCount){ const k=op.toLowerCase().replace(/[.,]/g,' ').replace(/\s+/g,' ').trim(); (groups[k]||(groups[k]=[])).push(op); }
+  const ops=Object.values(groups).map(g=>g.sort((a,b)=>opCount[b]-opCount[a])[0]).sort((a,b)=>a.localeCompare(b));
+  const codes={}; for (const op in opCodes) codes[op]=[...opCodes[op]];
+  const meta={label,count:n,ops:ops.length,loaded:new Date().toISOString()};
+  await idbPut({...chunks,ops,codes,meta,fields:WF.slice(1)}); return meta; }
+let DATA={ready:false,ops:[],codes:{},fields:WF.slice(1)};
+async function loadWellList(){
+  const st=$('dataStat'); let manifest=null;
+  try{ const r=await fetch('data/manifest.json',{cache:'no-cache'}); if(r.ok) manifest=await r.json(); }catch(e){}
+  const meta=await idbGet('meta');
+  if (meta && (!manifest || meta.label===manifest.csv)){ await useCached(meta); return; }
+  if (!manifest){ if(meta) await useCached(meta); else st.innerHTML='<span class="bad">Well list not found.</span>'; return; }
+  try{ st.textContent=`Downloading ${manifest.csv}…`;
+    const r=await fetch('data/'+manifest.csv); if(!r.ok) throw new Error('HTTP '+r.status);
+    const total=+r.headers.get('content-length')||0, reader=r.body.getReader(), parts=[]; let got=0;
+    for(;;){ const {done,value}=await reader.read(); if(done) break; parts.push(value); got+=value.length; st.textContent=`Well list ${(got/1e6).toFixed(0)}${total?`/${(total/1e6).toFixed(0)}`:''} MB…`; }
+    st.textContent='Indexing wells…'; await new Promise(r=>setTimeout(r,20));
+    await useCached(await buildFromText(new TextDecoder().decode(await new Blob(parts).arrayBuffer()),manifest.csv));
+  }catch(e){ st.innerHTML=`<span class="bad">Could not download the well list (${esc(e.message)}).</span>`; if(meta) await useCached(meta); } }
+async function useCached(meta){
+  DATA.ops=(await idbGet('ops'))||[]; DATA.codes=(await idbGet('codes'))||{}; DATA.fields=(await idbGet('fields'))||WF.slice(1); DATA.ready=true;
+  $('opsList').innerHTML=DATA.ops.map(o=>`<option value="${esc(o)}">`).join('');
+  $('dataStat').textContent=`${meta.count.toLocaleString()} wells · ${meta.ops.toLocaleString()} operators · ${meta.label}`;
+  if (S.api && !S.well) lookup(S.api); }
+async function lookup(raw){
+  const a8=normAPI(raw);
+  if(!a8){ S.well=null; S.apiMsg=String(raw||'').trim()?'Not a California API. Use 04-CCC-NNNNN, 04CCCNNNNN or CCCNNNNN.':''; refresh(); return; }
+  if(!DATA.ready){ S.apiMsg='Waiting for the well list…'; refresh(); return; }
+  const ch=await idbGet('c'+a8.slice(0,4)); const v=ch&&ch[a8]; if (normAPI(S.api)!==a8) return;
+  if(!v){ S.well=null; S.apiMsg=`${fmtAPI(a8)} is not in the well list. Fill the header by hand or from the permit.`; refresh(); return; }
+  const o=Object.fromEntries(DATA.fields.map((k,i)=>[k,v[i]])); S.well=o; S.apiMsg='';
+  Object.assign(S,{operator:o.OperatorNa||S.operator,lease:o.LeaseName&&o.LeaseName!=='Unspecified'?o.LeaseName:S.lease,wellNo:o.WellNumber||S.wellNo,field:o.FieldName||S.field,county:o.CountyName||S.county,
+    str:[o.Section,o.Township,o.Range].filter(Boolean).join('-')||S.str,hpz:HPZ_MAP[o.inHPZ]||S.hpz});
+  fillForm(); save(); refresh(); }
+
+/* ---------------- state ---------------- */
+let S, sid=1;
+const sec=(o={})=>({id:'s'+(sid++)+'_'+Math.random().toString(36).slice(2,6),od:7,wt:23,bot:'',top:'',...o});
+function blank(){ return {api:'',permitNo:'',operator:'',lease:'',wellNo:'',field:'',county:'',str:'',hpz:'',date:'',well:null,apiMsg:'',
+  type:'Bottom / hydrocarbon plug (covers perfs)',method:'Coiled tubing (CT)',desc:'',bot:'',reqTop:'',reqAuto:false,tag:'',vol:'',tagBy:'CT / tubing',tagWt:'',witness:'',
+  secs:[sec({od:7,wt:23})],idSrc:'formula',zoom:'plug',permit:null,sqzText:'',sqzEdited:false,notes:''}; }
+function example(){ const s=blank(); // operator-reported values for API 04-029-16337, permit 7056780
+  Object.assign(s,{api:'0402916337',permitNo:'7056780',operator:'E & B Natural Resources Management Corporation',lease:'Section 9',wellNo:'4-6',field:'Poso Creek',county:'Kern',str:'09-28S-27E',hpz:'Yes',
+    type:'Bottom / hydrocarbon plug (covers perfs)',method:'Coiled tubing (CT)',desc:"Etchegoin 2352', Chanac 2469'",bot:2427,reqTop:2143,tag:1753,vol:120.37,
+    secs:[sec({od:5.5,wt:20,bot:2427,top:2338}),sec({od:7,wt:23,bot:2338,top:1753})],
+    notes:"Operator calc: Csg. 5.5\" 20# 2427'-2338' / 7\" 23# 2338'-1753'. Theoretical volume required 140.38 cu ft; actual volume pumped 120.37 cu ft."});
+  return s; }
+function save(){ try{ localStorage.setItem('plug-review-1',JSON.stringify(S)); }catch(e){} }
+function loadState(){ try{ const t=localStorage.getItem('plug-review-1'); if(t) return Object.assign(blank(),JSON.parse(t)); }catch(e){} return example(); }
+
+/* ---------------- calculations ---------------- */
+function secID(s,src=S.idSrc){ const od=num(s.od), w=num(s.wt); if(!od||w==null) return NaN; const b=bookID(od,w); return src==='table'&&b!=null?b:idFormula(od,w); }
+function sections(src){ return S.secs.map(s=>({od:num(s.od),wt:num(s.wt),bot:num(s.bot),top:num(s.top),id:secID(s,src)})).filter(s=>s.od&&s.bot!=null&&s.top!=null&&s.bot>s.top&&isFinite(s.id)).map(s=>({...s,cf:cfPerFt(s.id)})).sort((a,b)=>b.bot-a.bot); }
+function volBetween(top,bot,secs){ let v=0, cov=0; for(const s of secs){ const a=Math.max(top,s.top), b=Math.min(bot,s.bot); if(b>a){ v+=(b-a)*s.cf; cov+=b-a; } } return {v,missing:Math.max(0,(bot-top)-cov)}; }
+function topFromVolume(bot,vol,secs){ let rem=vol, d=bot; for(const s of secs){ if(s.top>=d) continue; const b=Math.min(d,s.bot), len=b-s.top; if(len<=0) continue; const need=len*s.cf; if(rem<=need) return {top:b-rem/s.cf,over:0}; rem-=need; d=s.top; } return {top:d,over:rem}; }
+function calc(src=S.idSrc){
+  const secs=sections(src), bot=num(S.bot), vol=num(S.vol), tag=num(S.tag), req=num(S.reqTop), R={secs,bot,vol,tag,req};
+  if(bot==null||!secs.length) return R;
+  if(tag!=null&&tag<bot){ const t=volBetween(tag,bot,secs); R.vTag=t.v; R.missTag=t.missing; }
+  if(req!=null&&req<bot){ const t=volBetween(req,bot,secs); R.vReq=t.v; R.missReq=t.missing; }
+  if(vol!=null&&vol>0){ const t=topFromVolume(bot,vol,secs); R.theoTop=t.top; R.overflow=t.over; }
+  if(R.vTag&&vol!=null){ R.pctTag=vol/R.vTag*100; R.defTag=100-R.pctTag; }
+  if(R.vReq&&vol!=null) R.pctReq=vol/R.vReq*100;
+  if(tag!=null&&R.theoTop!=null) R.tagVsTheo=R.theoTop-tag;   // + : tag shallower than the volume can reach
+  if(tag!=null&&req!=null) R.tagVsReq=req-tag;                // + : tag above the required top
+  return R; }
+
+/* ---------------- permit ---------------- */
+async function loadPdfJs(){ if(window.pdfjsLib) return; await new Promise((res,rej)=>{ const s=document.createElement('script'); s.src='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js'; s.onload=res; s.onerror=()=>rej(new Error('pdf.js did not load')); document.head.appendChild(s); });
+  pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; }
+async function readPermit(file){ $('dropTxt').textContent=`Reading ${file.name}…`;
+  try{ await loadPdfJs(); const pdf=await pdfjsLib.getDocument({data:new Uint8Array(await file.arrayBuffer())}).promise; let txt='';
+    for(let p=1;p<=pdf.numPages;p++){ const tc=await (await pdf.getPage(p)).getTextContent(); let lastY=null; for(const it of tc.items){ const y=it.transform[5]; txt+=(lastY!=null&&Math.abs(y-lastY)>2)?'\n':(lastY!=null?' ':''); txt+=it.str; lastY=y; } txt+='\n'; }
+    if (txt.replace(/\s/g,'').length<50){ $('dropTxt').textContent=`${file.name} has no readable text (scanned?).`; return; }
+    applyPermit(parsePermit(txt),file.name);
+  }catch(e){ $('dropTxt').textContent=`Could not read ${file.name}: ${e.message}`; } }
+function applyPermit(P,name){ P.file=name; S.permit=P; const H=P.H;
+  const set=(k,v)=>{ if(v&&!String(S[k]||'').trim()) S[k]=v; };
+  if (P.permitNo) S.permitNo=P.permitNo;
+  set('api',H.api); set('operator',H.operator); set('lease',H.lease); set('wellNo',H.wellNo); set('field',H.field); set('county',H.county);
+  set('str',[H.sec,H.twp,H.rge].filter(Boolean).join('-'));
+  autoReq(); if(!S.sqzEdited) S.sqzText=sqzSummary();
+  fillForm(); save(); if(!S.well && normAPI(S.api)) lookup(S.api); refresh(); $('dropTxt').textContent=`${name} · drop another to replace`; }
+function autoReq(){ const P=S.permit, b=num(S.bot); if(!P||!P.plugs.length) return;
+  const m = b!=null ? P.plugs.filter(r=>b>=r.top&&b<=r.bot+50).sort((a,c)=>c.top-a.top)[0] : P.plugs.slice().sort((a,c)=>c.bot-a.bot)[0];
+  if (m && (S.reqAuto || !String(S.reqTop).trim())){ S.reqTop=m.top; S.reqAuto=true; } }
+function parsePermit(raw){
+  const t=raw.replace(/[’‘`]/g,"'").replace(/[”“]/g,'"').replace(/[–—]/g,'-').replace(/ /g,' '), flat=t.replace(/\s*\n\s*/g,' '); let m;
+  const P={permitNo:(flat.match(/Permit No\.?:?\s*(\d+)/i)||[])[1]||'',date:(flat.match(/(January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{1,2},\s+\d{4}/)||[])[0]||'',
+    engineer:(flat.match(/Engineer:\s*([A-Z][\w.' -]+?)\s+Direct/i)||[])[1]||'',plugs:[],squeezes:[],markers:[],zones:[],witness:[],cleanout:null,surfacePlug:null,cutoff:null,mud:null,H:{}};
+  const D=s=>/surface/i.test(s)?0:num(s);
+  const reP=/plugged with cement from\s+(\d[\d,]*'|the surface)\s+to\s+(\d[\d,]*'|the surface)/gi; while((m=reP.exec(flat))){ const a=D(m[1]),b=D(m[2]); P.plugs.push({top:Math.min(a,b),bot:Math.max(a,b)}); }
+  const reS=/perforated at\s+(\d[\d,]*)'?\s*-\s*(\d[\d,]*)'?\s+and sufficient cement shall be squeezed to fill to\s+(\d[\d,]*)'?\s+(inside and outside|outside|inside)?/gi;
+  while((m=reS.exec(flat))){ const a=num(m[1]),b=num(m[2]); P.squeezes.push({top:Math.min(a,b),bot:Math.max(a,b),fill:num(m[3]),where:m[4]||''}); }
+  if((m=flat.match(/cleaned out to\s+(\d[\d,]*)'/i))) P.cleanout=num(m[1]);
+  if((m=flat.match(/cut off at least\s+(\d+)\s+feet but no more than\s+(\d+)\s+feet/i))) P.cutoff=[num(m[1]),num(m[2])];
+  if((m=flat.match(/at least a\s+(\d+)-foot cement plug/i))) P.surfacePlug=num(m[1]);
+  const reM=/top of the\s+([A-Z][\w .-]*?)\s+is at\s+(?:approximately\s+)?(\d[\d,]*)'/gi; while((m=reM.exec(flat))){ const nm=m[1].trim(); if(!P.markers.some(x=>x.name===nm)) P.markers.push({name:nm,d:num(m[2])}); }
+  const reZ=/For isolation of (?:the )?(.+?)(?: zones?)?(?:,| at )/gi; while((m=reZ.exec(flat))) P.zones.push(m[1].replace(/^lower portion of the well and /i,'').trim());
+  const reW=/Witness the\s+(.+?)\.\s*(CalGEM (?:shall|may) witness)?/gi; while((m=reW.exec(flat))){ const d=[...m[1].matchAll(/(\d[\d,]*)'/g)].map(x=>num(x[1])); P.witness.push({text:m[1],depths:d,level:m[2]?m[2].replace('CalGEM ',''):''}); }
+  const sents=flat.split(/(?<=\.)\s+(?=[A-Z0-9])/), sent=re=>{ const x=sents.find(s=>re.test(s)); return x?x.trim():''; };
+  const crit=sent(/critical well/i); P.critical=crit?(/\b(not|non)[- ]critical|is not a critical/i.test(crit)?'No':'Yes'):'Not stated'; P.criticalText=crit;
+  P.h2sText=sent(/hydrogen sulfide|\bH2S\b/i); P.hpzText=sent(/health protection zone|\bHPZ\b/i); P.thermalText=sent(/silica flour/i);
+  const mudS=sent(/not plugged with cement[^.]*mud|inert mud|mud fluid/i);
+  if(mudS){ const w=mudS.match(/(\d+(?:\.\d+)?)\s*lbs?\.?\s*\/\s*cu\.?\s*ft/i), g=mudS.match(/gel[^.]*?(\d+(?:\.\d+)?)\s*lbs?\.?\s*\/\s*100/i); P.mud={text:mudS,wt:w?num(w[1]):null,gel:g?num(g[1]):null}; }
+  // cement all the way vs mud spacers between required cement
+  const cutTop=P.cutoff?P.cutoff[1]:0, ivs=[...P.plugs]; if(P.surfacePlug) ivs.push({top:cutTop,bot:cutTop+P.surfacePlug});
+  const deepest=Math.max(P.cleanout||0,...ivs.map(v=>v.bot),0);
+  P.gaps=deepest?gapsIn(cutTop,deepest,ivs):[]; P.cementAll=deepest>0&&!P.gaps.length;
+  // header
+  const H=P.H, para=(flat.match(/received your (Notice of Intention.*?County)/i)||[])[1]||flat;
+  if((m=para.match(/for well\s+(.+?),\s*API/i))){ const w=m[1].trim(), q=w.match(/^"([^"]+)"\s*(.*)$/); if(q){ H.lease=q[1].trim(); H.wellNo=q[2].trim(); } else H.wellNo=w; }
+  if((m=para.match(/API\.?\s*No\.?:?\s*([\d-]+)/i))||(m=flat.match(/API\.?\s*No\.?:?\s*([\d-]+)/i))) H.api=m[1];
+  if((m=para.match(/,\s*([A-Z][^,]*?)\s+field\b/i))) H.field=m[1].trim();
+  if((m=para.match(/\bSec\.\s*(\d+\w?)/i))) H.sec=m[1]; if((m=para.match(/\bT\.\s*(\d+\s*[NS])/i))) H.twp=m[1].replace(/\s+/g,''); if((m=para.match(/\bR\.\s*(\d+\s*[EW])/i))) H.rge=m[1].replace(/\s+/g,'');
+  if((m=para.match(/B\s*&\s*M,\s*([A-Z][\w .]*?)\s+County/i))) H.county=m[1].trim();
+  if((m=para.match(/Notice of Intention to ([A-Za-z]+(?: [A-Za-z]+)?)/i))) H.notice=m[1].trim();
+  const lines=t.split('\n').map(x=>x.trim()).filter(Boolean), pi=lines.findIndex(x=>/Permit No\.?:/i.test(x));
+  const corp=/\b(LLC|L\.L\.C\.|Inc\.?|Company|Co\.|Corporation|Corp\.?|LP|L\.P\.|Ltd\.?|Partnership|Trust|Operating|Oil|Energy|Resources)\b/i;
+  if(pi>=0){ const blk=lines.slice(pi+1,pi+6).filter(x=>!/^\d/.test(x)&&!/,\s*CA\s+\d{5}/.test(x)&&!/received your/i.test(x)); H.operator=(blk.find(x=>corp.test(x))||blk[1]||'').trim(); }
+  return P; }
+function gapsIn(top,bot,ivs){ const s=ivs.filter(v=>v.bot>top&&v.top<bot).map(v=>[Math.max(v.top,top),Math.min(v.bot,bot)]).sort((a,b)=>a[0]-b[0]); const g=[]; let cur=top; for(const [a,b] of s){ if(a>cur+0.5) g.push([cur,a]); cur=Math.max(cur,b);} if(cur<bot-0.5) g.push([cur,bot]); return g; }
+function sqzSummary(){ const P=S.permit; if(!P) return '';
+  if(!P.squeezes.length) return 'No squeeze required in permit; cement behind pipe = satisfactory (TB verified).';
+  return P.squeezes.map(q=>`Squeeze required: perforate ${f0(q.top)}'–${f0(q.bot)}'${q.fill!=null?`, fill to ${f0(q.fill)}'${q.where?' '+q.where:''}`:''}.`).join('\n'); }
+
+/* ---------------- rendering ---------------- */
+function fillForm(){ document.querySelectorAll('[data-k]').forEach(el=>{ if(document.activeElement!==el) el.value=S[el.dataset.k]??''; });
+  document.querySelectorAll('[data-ids]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.ids===S.idSrc));
+  document.querySelectorAll('[data-zoom]').forEach(b=>b.setAttribute('aria-pressed',b.dataset.zoom===S.zoom)); }
+function odOpts(v){ return CASING.map(c=>`<option value="${c[1]}"${Math.abs(c[1]-num(v))<1e-6?' selected':''}>${c[0]}″</option>`).join(''); }
+function renderSecs(){
+  $('secTbl').innerHTML=`<colgroup><col style="width:70px"><col style="width:64px"><col style="width:72px"><col style="width:72px"><col style="width:74px"><col style="width:66px"><col style="width:58px"><col style="width:78px"><col style="width:24px"></colgroup>
+  <thead><tr><th>OD</th><th>Wt, ppf</th><th>Bottom, ft</th><th>Top, ft</th><th>ID, in.</th><th>ft³/ft</th><th>Length</th><th>To tag, ft³</th><th></th></tr></thead><tbody>`+
+  S.secs.map((s,i)=>`<tr data-s="${s.id}"><td><select data-c="od" aria-label="OD">${odOpts(s.od)}</select></td>
+    <td><input type="number" step="0.1" list="wl-${s.id}" data-c="wt" value="${esc(s.wt)}" aria-label="Weight"><datalist id="wl-${s.id}">${((CASING.find(c=>Math.abs(c[1]-num(s.od))<1e-6)||[])[2]||[]).map(w=>`<option value="${w[0]}">`).join('')}</datalist></td>
+    <td><input type="number" step="1" data-c="bot" value="${esc(s.bot)}" aria-label="Section bottom"></td><td><input type="number" step="1" data-c="top" value="${esc(s.top)}" aria-label="Section top"></td>
+    <td class="o" data-o="id"></td><td class="o" data-o="cf"></td><td class="o" data-o="len"></td><td class="o" data-o="v"></td>
+    <td>${S.secs.length>1?`<button type="button" class="x noprint" data-del="${i}" aria-label="Remove section">✕</button>`:''}</td></tr>`).join('')+
+  `</tbody><tfoot><tr><td colspan="6">Volume required, bottom to tagged TOC</td><td class="o" id="sumLen"></td><td class="o" id="sumV"></td><td></td></tr></tfoot>`; }
+function refresh(){
+  const R=calc(), alt=calc(S.idSrc==='formula'?'table':'formula'), P=S.permit;
+  $('volBbl').textContent=R.vol!=null?f2(R.vol/CF_BBL,2):'–';
+  const o=S.well;
+  $('wellInfo').innerHTML = S.apiMsg?`<span class="bad">${esc(S.apiMsg)}</span>`: o?`<b>${fmtAPI(normAPI(S.api))}</b> · ${esc(o.WellStatus)} ${esc(o.WellTypeLa)} · ${esc(o.District)} District · op. code ${esc(o.OperatorCo)} · spud ${esc(o.SpudDate||'n/a')}${o.isDirectio==='Y'?' · <span class="bad">directional</span>':''} · HPZ in list: ${esc(o.inHPZ)} · ${o.Latitude?(+o.Latitude).toFixed(6)+', '+(+o.Longitude).toFixed(6):''}`:'Enter an API number; the header fills from the well list or the permit.';
+  let sumL=0;
+  for(const s of S.secs){ const tr=document.querySelector(`tr[data-s="${s.id}"]`); if(!tr) continue; const id=secID(s), b=num(s.bot), t=num(s.top), bk=bookID(num(s.od),num(s.wt));
+    tr.querySelector('[data-o="id"]').innerHTML=isFinite(id)?`${f2(id,3)}${S.idSrc==='formula'&&bk!=null?`<div style="font-size:10px;color:var(--muted)">CWC ${bk.toFixed(3)}</div>`:''}`:'–';
+    tr.querySelector('[data-o="cf"]').textContent=isFinite(id)?f2(cfPerFt(id),4):'–';
+    const a=(R.tag!=null&&t!=null)?Math.max(t,R.tag):t, len=(b!=null&&a!=null)?Math.max(0,b-a):null; if(len) sumL+=len;
+    tr.querySelector('[data-o="len"]').textContent=len!=null?f0(len):'–';
+    tr.querySelector('[data-o="v"]').textContent=len!=null&&isFinite(id)?f2(len*cfPerFt(id),2):'–'; }
+  $('sumLen').textContent=sumL?f0(sumL):'–'; $('sumV').textContent=R.vTag!=null?f2(R.vTag,2):'–';
+  $('secNote').textContent=R.missTag>0.5?`Pipe sections don’t span bottom to tag: ${f0(R.missTag)} ft uncovered.`:''; $('secNote').className='info'+(R.missTag>0.5?' bad':'');
+  const k=(l,v,s,cls='')=>`<div class="kpi ${cls}"><div class="l">${l}</div><div class="v">${v}</div><div class="s">${s}</div></div>`;
+  $('kpis').innerHTML=
+    k('Volume to tagged TOC',R.vTag!=null?f2(R.vTag,2):'–',R.vTag!=null?`ft³ · ${f2(R.vTag/CF_BBL,1)} bbl`:'enter bottom, tag, pipe')+
+    k('Pumped',R.vol!=null?f2(R.vol,2):'–',R.vol!=null?`ft³ · ${f2(R.vol/CF_BBL,1)} bbl`:'ft³')+
+    k('% of required',R.pctTag!=null?f2(R.pctTag,1)+'%':'–',R.pctTag!=null?(R.defTag>0?`${f2(R.defTag,1)}% deficient`:`${f2(-R.defTag,1)}% over`):'pumped ÷ volume to tag',R.pctTag!=null?(R.defTag>0?'bad':'ok'):'')+
+    k('Theoretical TOC',R.theoTop!=null?f0(R.theoTop)+'′':'–',R.theoTop!=null?(R.tagVsTheo!=null?`tag ${f0(Math.abs(R.tagVsTheo))} ft ${R.tagVsTheo>=0?'higher':'lower'}`:'from volume pumped'):'from volume pumped');
+  const plain=x=>x==null?'—':String(Math.round(x));
+  const csgTxt=R.secs.map(s=>`${odTxt(s.od)}" ${s.wt}# ${plain(s.bot)}'-${plain(R.tag!=null?Math.max(s.top,R.tag):s.top)}'`).join(' / ');
+  $('calcText').textContent=[`Permit requires ${R.req!=null?plain(R.req)+"'":'—'}. TOC tagged @ ${R.tag!=null?plain(R.tag)+"'":'—'}.`,
+    `Csg. ${csgTxt||'—'} (Calculation Depths)`,
+    `Theoretical Volume Required: ${R.vTag!=null?f2(R.vTag,2):'—'} cu ft`,
+    `Actual Volume Pumped: ${R.vol!=null?f2(R.vol,2):'—'} cu ft${R.pctTag!=null?` (${f2(R.pctTag,1)}% of required; ${R.defTag>0?f2(R.defTag,1)+'% deficient':f2(-R.defTag,1)+'% over'})`:''}`].join('\n');
+  const F=[];
+  if(R.tagVsReq!=null) F.push([R.tagVsReq>=0?'':'b',`Tag is ${f0(Math.abs(R.tagVsReq))} ft ${R.tagVsReq>=0?'above':'below'} the permit top of ${f0(R.req)}'${R.tagVsReq>=0?'; depth requirement met.':'; plug short of the required top.'}`]);
+  if(R.vReq!=null&&R.vol!=null) F.push(['',`Volume to fill to the permit top: ${f2(R.vReq,2)} ft³; pumped is ${f2(R.pctReq,0)}% of that.`]);
+  if(R.tagVsTheo!=null&&Math.abs(R.tagVsTheo)>=1) F.push([R.tagVsTheo>0?'w':'b',R.tagVsTheo>0?`Tag is ${f0(R.tagVsTheo)} ft higher than ${f2(R.vol,2)} ft³ can reach (theoretical TOC ${f0(R.theoTop)}'). The cement above ${f0(R.theoTop)}' is unaccounted for: check for a contaminated or mud-cut top, a bridge, or an under-reported volume.`:`Tag is ${f0(-R.tagVsTheo)} ft deeper than theoretical; ${f2(R.vol-R.vTag,2)} ft³ of the volume pumped is not in the plug (losses, strung out or channeling).`]);
+  if(alt.vTag!=null&&R.vTag!=null&&Math.abs(alt.vTag-R.vTag)>0.01) F.push(['',`With ${S.idSrc==='formula'?'CWC table':'formula'} IDs: ${f2(alt.vTag,2)} ft³ required, ${f2(alt.pctTag,1)}% of required.`]);
+  if(R.overflow>0) F.push(['w',`Pumped volume is more than the pipe sections entered can hold (${f2(R.overflow,2)} ft³ left over); add the section above.`]);
+  if(P&&P.mud) F.push(['',`Permit fills the hole between plugs with mud${P.mud.wt?` (≥${P.mud.wt} lb/ft³${P.mud.gel?`, gel ≥${P.mud.gel} lb/100 ft²`:''})`:''}; the well is not cemented all the way.`]);
+  $('findings').innerHTML=F.map(([c,t])=>`<div class="${c}">${esc(t)}</div>`).join('');
+  renderPermit(); drawWBD(R); }
+function renderPermit(){ const P=S.permit, out=$('permitOut'); if(!P){ out.innerHTML=''; return; }
+  const chip=(v,cls)=>`<span class="chip ${cls}">${esc(v)}</span>`;
+  const wit=P.witness.map(w=>`${esc(w.text.replace(/^location and hardness of (the )?/i,''))}${w.level?' '+chip(w.level,/shall/.test(w.level)?'yes':''):''}`).join('<br>');
+  const mud=P.mud?`${chip('Yes','unc')}${P.mud.wt?` ${P.mud.wt} lb/ft³`:''}${P.mud.gel?` · gel ${P.mud.gel} lb/100 ft²`:''}`:chip('Not stated','');
+  const fill=P.cementAll?chip('Cement all the way','no'):P.gaps.length?`Mud spacer ${P.gaps.map(g=>`${f0(g[0])}'–${f0(g[1])}'`).join(', ')}`:'–';
+  out.innerHTML=`<dl class="kv">
+    <dt>Permit</dt><dd><b>${esc(P.permitNo||'–')}</b> · ${esc(P.date)}${P.engineer?' · '+esc(P.engineer):''} · NOI to ${esc(P.H.notice||'–')} <button type="button" class="x noprint" id="permitClear" title="Remove permit">✕</button></dd>
+    <dt>Critical well</dt><dd>${chip(P.critical,P.critical==='Yes'?'yes':'no')}</dd>
+    <dt>H₂S</dt><dd>${P.h2sText?chip('Present','yes'):chip('Not mentioned','no')}</dd>
+    <dt>Thermal cement</dt><dd>${P.thermalText?'35% silica flour required':'–'}</dd>
+    <dt>Required cement</dt><dd>${P.plugs.map(r=>`${r.top===0?'surface':f0(r.top)+"'"}–${f0(r.bot)}'`).join(', ')||'–'}${P.surfacePlug?` · ${P.surfacePlug}-ft surface plug`:''}</dd>
+    <dt>Clean out</dt><dd>${P.cleanout?f0(P.cleanout)+"'":'–'}</dd>
+    <dt>Mud between plugs</dt><dd>${mud}</dd>
+    <dt>Fill</dt><dd>${fill}</dd>
+    <dt>Zones</dt><dd style="grid-column:span 3">${P.markers.map(m=>`${esc(m.name)} ${f0(m.d)}'`).join(', ')||esc(P.zones.join(', '))||'–'}</dd>
+    <dt>Witness</dt><dd style="grid-column:span 3">${wit||'–'}</dd>
+  </dl>`; }
+
+/* ---------------- wellbore diagram ---------------- */
+function drawWBD(R){
+  const wrap=$('wbd'), secs=R.secs, P=S.permit;
+  if(!secs.length||R.bot==null){ wrap.innerHTML='<p class="info">Enter the plug bottom and the pipe sections to draw the plug.</p>'; $('legend').innerHTML=''; $('diagHint').textContent=''; return; }
+  const marks=P?P.markers:[], tops=[R.tag,R.req,R.theoTop,...secs.map(s=>s.top)].filter(v=>v!=null&&isFinite(v));
+  let d0,d1;
+  if(S.zoom==='plug'){ const lo=Math.min(...tops), hi=Math.max(R.bot,...secs.map(s=>s.bot),...marks.filter(m=>m.d<R.bot+300).map(m=>m.d)); const pad=Math.max(30,(hi-lo)*0.1); d0=Math.max(0,lo-pad); d1=hi+pad; }
+  else { d0=0; d1=Math.max(R.bot,...secs.map(s=>s.bot),...(P?[P.cleanout||0,...P.plugs.map(p=>p.bot),...marks.map(m=>m.d)]:[]))*1.04; }
+  const W=Math.max(320,Math.min(600,wrap.clientWidth||420)), H=Math.max(440,Math.min(960,window.innerHeight-110)), padT=12,padB=10,axW=48,labW=172;
+  const maxDia=Math.max(...secs.map(s=>s.od))*1.9, cx=axW+10+(W-axW-10-labW)/2, half=(W-axW-10-labW)/2-4, px=half/(maxDia/2);
+  const y=d=>padT+(H-padT-padB)*(d-d0)/(d1-d0), xr=d=>d/2*px, inR=d=>d>=d0&&d<=d1;
+  const css=getComputedStyle(document.documentElement), col=n=>css.getPropertyValue(n).trim();
+  const C={form:col('--form'),mud:col('--mud'),spacer:col('--mudspacer'),steel:col('--ink'),plug:col('--plug'),theo:col('--theo'),req:col('--req'),muted:col('--muted'),line:col('--line'),zone:col('--zone'),bad:col('--bad')};
+  let g=`<defs><pattern id="dots" width="5" height="5" patternUnits="userSpaceOnUse"><rect width="5" height="5" fill="${C.plug}"/><circle cx="1.5" cy="1.5" r=".8" fill="${C.steel}" opacity=".5"/></pattern>
+   <pattern id="gap" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="${C.mud}"/><line x1="0" y1="0" x2="0" y2="6" stroke="${C.bad}" stroke-width="1.2"/></pattern>
+   <pattern id="mudp" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><rect width="7" height="7" fill="${C.mud}"/><line x1="0" y1="0" x2="0" y2="7" stroke="${C.spacer}" stroke-width="1.6"/></pattern></defs>`;
+  g+=`<rect x="${axW+10}" y="${padT}" width="${W-axW-10-labW}" height="${H-padT-padB}" fill="${C.form}"/>`;
+  const span=d1-d0, step=[10,25,50,100,250,500,1000,2000,5000].find(s=>span/s<=11)||5000;
+  for(let d=Math.ceil(d0/step)*step; d<=d1; d+=step) g+=`<line x1="${axW-4}" x2="${W-labW}" y1="${y(d)}" y2="${y(d)}" stroke="${C.line}" stroke-width=".5" stroke-dasharray="2 3"/><text x="${axW-6}" y="${y(d)+3.5}" text-anchor="end" font-size="10" fill="${C.muted}">${d.toLocaleString()}</text>`;
+  const fillSec=(a,b,fill,op=1)=>{ for(const s of secs){ const t=Math.max(a,s.top,d0), u=Math.min(b,s.bot,d1); if(u>t) g+=`<rect x="${cx-xr(s.id)}" y="${y(t)}" width="${2*xr(s.id)}" height="${y(u)-y(t)}" fill="${fill}" opacity="${op}"/>`; } };
+  fillSec(-1e9,1e9,(P&&P.mud)?'url(#mudp)':C.mud);
+  if(R.tag!=null&&R.theoTop!=null&&R.tag<R.theoTop){ fillSec(R.theoTop,R.bot,'url(#dots)'); fillSec(R.tag,R.theoTop,'url(#gap)'); } // tag above what the volume supports
+  else if(R.tag!=null) fillSec(R.tag,R.bot,'url(#dots)'); else if(R.theoTop!=null) fillSec(R.theoTop,R.bot,'url(#dots)',.55);
+  for(const s of secs){ const t=Math.max(s.top,d0), u=Math.min(s.bot,d1); if(u<=t) continue; const wt=Math.max(1.8,xr(s.od)-xr(s.id));
+    for(const sg of [-1,1]) g+=`<rect x="${sg<0?cx-xr(s.od):cx+xr(s.id)}" y="${y(t)}" width="${wt}" height="${y(u)-y(t)}" fill="${C.steel}"/>`; }
+  const xb=xr(Math.max(...secs.map(s=>s.od)));
+  if(inR(R.bot)) g+=`<line x1="${cx-xb-6}" x2="${cx+xb+6}" y1="${y(R.bot)}" y2="${y(R.bot)}" stroke="${C.steel}" stroke-width="2"/>`;
+  const hl=(d,clr,dash,w=1.6)=>{ if(d!=null&&inR(d)) g+=`<line x1="${axW+10}" x2="${W-labW}" y1="${y(d)}" y2="${y(d)}" stroke="${clr}" stroke-width="${w}" stroke-dasharray="${dash}"/>`; };
+  hl(R.req,C.req,'8 3',1.8); hl(R.theoTop,C.theo,'5 3');
+  if(R.tag!=null&&inR(R.tag)) g+=`<path d="M${cx-xb-14} ${y(R.tag)} h${2*xb+28}" stroke="${C.steel}" stroke-width="2.4"/><path d="M${cx+xb+16} ${y(R.tag)-6} l-8 6 l8 6" fill="none" stroke="${C.steel}" stroke-width="1.6"/>`;
+  for(const m of marks) if(inR(m.d)) g+=`<line x1="${axW+10}" x2="${W-labW}" y1="${y(m.d)}" y2="${y(m.d)}" stroke="${C.zone}" stroke-width="1.1" stroke-dasharray="7 3"/><text x="${axW+13}" y="${y(m.d)-3}" font-size="10" font-style="italic" font-weight="600" fill="${C.zone}">${esc(m.name)} ${f0(m.d)}′</text>`;
+  if(S.zoom==='well'&&P){ for(const r of P.plugs) g+=`<path d="M${axW+8} ${y(r.top)} h-5 V${y(r.bot)} h5" stroke="${C.req}" stroke-width="2" fill="none"/>`; if(P.cleanout) hl(P.cleanout,C.muted,'2 3',1); }
+  const labels=[], lab=(d,t1,t2,c)=>{ if(d!=null&&inR(d)) labels.push({d,t1,t2,c}); };
+  lab(R.tag,`Tagged TOC ${f0(R.tag)}′`,R.pctTag!=null?`${f2(R.pctTag,1)}% of required volume`:'','ink');
+  lab(R.theoTop,`Theoretical TOC ${f0(R.theoTop)}′`,R.vol!=null?`${f2(R.vol,2)} ft³ pumped`:'','theo');
+  lab(R.req,`Permit TOC ${f0(R.req)}′`,'required top','req');
+  lab(R.bot,`Bottom ${f0(R.bot)}′`,S.method,'ink');
+  for(let i=0;i<secs.length-1;i++){ const a=secs[i], b=secs[i+1]; lab(a.top,`${odTxt(b.od)}″ ${b.wt}# / ${odTxt(a.od)}″ ${a.wt}#`,`crossover ${f0(a.top)}′`,'muted'); }
+  labels.sort((a,b)=>a.d-b.d); let last=-1e9,lh=0; const lx=W-labW+8;
+  for(const L of labels){ let ly=Math.max(y(L.d),last+lh); ly=Math.min(ly,H-padB-4); last=ly; lh=L.t2?24:14; const c={ink:C.steel,theo:C.theo,req:C.req,muted:C.muted}[L.c];
+    g+=`<path d="M${cx+xb+6} ${y(L.d)} L${lx-4} ${ly}" stroke="${C.muted}" stroke-width=".7" fill="none"/><text x="${lx}" y="${ly-1}" font-size="10.5" font-weight="600" fill="${c}">${esc(L.t1)}</text>`;
+    if(L.t2) g+=`<text x="${lx}" y="${ly+10}" font-size="9.5" fill="${C.muted}">${esc(L.t2)}</text>`; }
+  wrap.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Plug diagram to depth scale" style="font-family:var(--body);max-width:100%;height:auto">${g}</svg>`;
+  $('diagHint').textContent=`${f2((d1-d0)/(H-padT-padB),1)} ft/px · width not to scale`;
+  $('legend').innerHTML=`<span><i style="background:radial-gradient(circle,var(--ink) .8px,var(--plug) 1px) 0 0/5px 5px"></i>Cement (volume pumped)</span><span><i style="background:repeating-linear-gradient(45deg,var(--mud) 0 3px,var(--bad) 3px 4px)"></i>Tagged above theoretical TOC</span>${P&&P.mud?`<span><i style="background:repeating-linear-gradient(-45deg,var(--mud) 0 4px,var(--mudspacer) 4px 5.5px)"></i>Mud spacer</span>`:''}<span><i style="border:none;border-top:2px dashed var(--theo);height:2px;vertical-align:3px"></i>Theoretical TOC</span><span><i style="border:none;border-top:2px dashed var(--req);height:2px;vertical-align:3px"></i>Permit TOC</span><span><i style="border:none;border-top:2px dashed var(--zone);height:2px;vertical-align:3px"></i>Zone top</span>`; }
+
+/* ---------------- summary ---------------- */
+function summary(){ const R=calc(), P=S.permit, L=[];
+  L.push(`PLUG VOLUME REVIEW · API ${fmtAPI(normAPI(S.api))||S.api} · Permit ${S.permitNo||'–'}`);
+  L.push(`${S.operator} · ${[S.lease,S.wellNo].filter(Boolean).join(' ')} · ${S.field} · ${S.county} · ${S.str} · HPZ ${S.hpz||'–'}${P?` · critical well ${P.critical} · H2S ${P.h2sText?'present':'not mentioned'} · ${P.cementAll?'cement all the way':P.mud?'mud between plugs':''}`:''}`);
+  L.push(`${S.type} · placed with ${S.method}${S.desc?` · ${S.desc}`:''}`);
+  L.push($('calcText').textContent);
+  if(R.theoTop!=null) L.push(`Theoretical TOC from volume pumped: ${f0(R.theoTop)}'${R.tagVsTheo!=null?` (tag ${f0(Math.abs(R.tagVsTheo))} ft ${R.tagVsTheo>=0?'higher':'lower'})`:''}`);
+  L.push(`Tagged with ${S.tagBy}${S.tagWt?`, ${S.tagWt}`:''}${S.witness?` · witnessed by ${S.witness}`:''}${S.date?` · ${S.date}`:''}`);
+  if(S.sqzText) L.push('Squeeze: '+S.sqzText.replace(/\n/g,' '));
+  if(S.notes) L.push('Notes: '+S.notes); return L.join('\n'); }
+
+/* ---------------- events ---------------- */
+function rerender(){ fillForm(); renderSecs(); refresh(); }
+function bind(){
+  document.addEventListener('input',e=>{ const t=e.target;
+    if(t.dataset.k){ const k=t.dataset.k; S[k]=t.value;
+      if(k==='api'){ S.well=null; clearTimeout(bind.tm); bind.tm=setTimeout(()=>lookup(t.value),300); }
+      if(k==='reqTop') S.reqAuto=false;
+      if(k==='bot'){ const s0=S.secs[0]; if(s0&&(!String(s0.bot).trim()||s0.botAuto)){ s0.bot=t.value; s0.botAuto=true; renderSecs(); } autoReq(); fillForm(); }
+      if(k==='tag'){ const sl=S.secs[S.secs.length-1]; if(sl&&(!String(sl.top).trim()||sl.topAuto)){ sl.top=t.value; sl.topAuto=true; renderSecs(); } }
+      if(k==='sqzText') S.sqzEdited=true;
+      save(); if(k!=='notes') refresh(); return; }
+    const tr=t.closest('tr[data-s]'); if(tr&&t.dataset.c){ const s=S.secs.find(x=>x.id===tr.dataset.s); s[t.dataset.c]=t.value;
+      if(t.dataset.c==='bot') s.botAuto=false; if(t.dataset.c==='top') s.topAuto=false;
+      if(t.dataset.c==='od'){ const w=(CASING.find(c=>Math.abs(c[1]-num(t.value))<1e-6)||[0,0,[]])[2]; if(w.length&&!w.some(x=>x[0]===num(s.wt))) s.wt=w[0][0]; renderSecs(); }
+      if(t.dataset.c==='top'){ const i=S.secs.indexOf(s), nx=S.secs[i+1]; if(nx&&(!String(nx.bot).trim()||nx.botAuto)){ nx.bot=t.value; nx.botAuto=true; renderSecs(); } }
+      save(); refresh(); } });
+  document.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return;
+    if(b.dataset.ids){ S.idSrc=b.dataset.ids; save(); fillForm(); refresh(); }
+    if(b.dataset.zoom){ S.zoom=b.dataset.zoom; save(); fillForm(); refresh(); }
+    if(b.dataset.del!=null&&b.closest('#secTbl')){ S.secs.splice(+b.dataset.del,1); save(); rerender(); }
+    if(b.id==='permitClear'){ S.permit=null; if(!S.sqzEdited) S.sqzText=''; save(); fillForm(); refresh(); $('dropTxt').textContent='Drop the Permit to Conduct Well Operations PDF here, or click to choose'; } });
+  $('addSec').onclick=()=>{ const last=S.secs[S.secs.length-1]; if(last&&last.topAuto){ last.top=''; last.topAuto=false; } S.secs.push(sec({od:7,wt:23,bot:'',top:S.tag||'',topAuto:true})); save(); rerender(); };
+  $('btnNew').onclick=()=>{ S=blank(); save(); rerender(); $('dropTxt').textContent='Drop the Permit to Conduct Well Operations PDF here, or click to choose'; };
+  $('btnExample').onclick=()=>{ S=example(); save(); rerender(); lookup(S.api); };
+  $('btnCopy').onclick=async()=>{ const t=summary(); try{ await navigator.clipboard.writeText(t); }catch(e){ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); } $('btnCopy').textContent='Copied'; setTimeout(()=>$('btnCopy').textContent='Copy summary',1500); };
+  $('btnExport').onclick=()=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify({...S,well:undefined},null,2)],{type:'application/json'})); a.download=`plug_${normAPI(S.api)?'04'+normAPI(S.api):'well'}_${S.bot||''}.json`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); };
+  $('btnImport').onclick=()=>$('jsonFile').click();
+  $('jsonFile').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; try{ S=Object.assign(blank(),JSON.parse(await f.text())); save(); rerender(); lookup(S.api); }catch(err){ $('dataStat').textContent='Could not import: '+err.message; } e.target.value=''; };
+  $('btnPrint').onclick=()=>window.print();
+  $('csvPick').onclick=()=>$('csvFile').click();
+  $('csvFile').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; $('dataStat').textContent=`Reading ${f.name}…`; try{ await useCached(await buildFromText(await f.text(),f.name)); }catch(err){ $('dataStat').innerHTML=`<span class="bad">Could not read ${esc(f.name)}: ${esc(err.message)}</span>`; } e.target.value=''; };
+  const drop=$('drop'), pf=$('pdfFile');
+  drop.onclick=()=>pf.click(); drop.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); pf.click(); } };
+  pf.onchange=()=>{ if(pf.files[0]) readPermit(pf.files[0]); pf.value=''; };
+  ['dragenter','dragover'].forEach(v=>drop.addEventListener(v,e=>{ e.preventDefault(); drop.classList.add('over'); }));
+  ['dragleave','drop'].forEach(v=>drop.addEventListener(v,e=>{ e.preventDefault(); drop.classList.remove('over'); }));
+  drop.addEventListener('drop',e=>{ const f=[...e.dataTransfer.files].find(f=>/\.pdf$/i.test(f.name)||f.type==='application/pdf'); if(f) readPermit(f); });
+  window.addEventListener('resize',()=>refresh());
+}
+S=loadState(); bind(); rerender(); if(S.permit) $('dropTxt').textContent=`${S.permit.file} · drop another to replace`;
+loadWellList();
+</script>
+</body>
+</html>
