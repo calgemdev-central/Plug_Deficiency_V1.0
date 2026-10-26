@@ -73,7 +73,8 @@ table.t tfoot td{font-weight:600;border-top:1.5px solid var(--ink);border-bottom
 .kpi .l{font-size:9.5px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
 .kpi .v{font-family:var(--mono);font-size:20px;font-weight:600;line-height:1.15;font-variant-numeric:tabular-nums}
 .kpi .s{font-size:11px;color:var(--muted);font-family:var(--mono)}
-.kpi.bad{background:var(--bad-soft)} .kpi.bad .v{color:var(--bad)} .kpi.ok .v{color:var(--ok)}
+.kpi.bad{background:var(--bad-soft)} .kpi.bad .v{color:var(--bad)} .kpi.warn{background:var(--warn-soft)} .kpi.warn .v{color:var(--warn)} .kpi.ok .v{color:var(--ok)}
+.kpi .s b{font-weight:600;color:inherit}
 .calc{font-family:var(--mono);font-size:12px;background:var(--surface-2);border:1px solid var(--line);border-radius:5px;padding:6px 8px;margin-top:6px;white-space:pre-wrap;line-height:1.5}
 .findings{font-size:12px;margin-top:6px;display:flex;flex-direction:column;gap:2px}
 .findings div{padding-left:14px;position:relative} .findings div::before{content:"›";position:absolute;left:3px;color:var(--accent)}
@@ -105,7 +106,7 @@ table.t tfoot td{font-weight:600;border-top:1.5px solid var(--ink);border-bottom
 <body>
 <div class="wrap">
 <header class="top">
-  <h1>Plug Volume Review</h1>
+  <h1>Plug Volume Review <span id="ver" style="font-family:var(--mono);font-size:11px;font-weight:500;color:var(--muted);font-stretch:100%">v2026.10.26-6</span></h1>
   <div class="bar noprint">
     <button type="button" id="btnNew">New</button>
     <button type="button" id="btnExample">Example (04-029-16337)</button>
@@ -301,8 +302,8 @@ function blank(){ return {api:'',permitNo:'',operator:'',lease:'',wellNo:'',fiel
 function example(){ const s=blank(); // operator-reported values for API 04-029-16337, permit 7056780
   Object.assign(s,{api:'0402916337',permitNo:'7056780',operator:'E & B Natural Resources Management Corporation',lease:'Section 9',wellNo:'4-6',field:'Poso Creek',county:'Kern',str:'09-28S-27E',hpz:'Yes',
     type:'Bottom / hydrocarbon plug (covers perfs)',method:'Coiled tubing (CT)',desc:"Etchegoin 2352', Chanac 2469'",bot:2427,reqTop:2143,tag:1753,vol:120.37,
-    secs:[sec({od:5.5,wt:20,bot:2427,top:2338}),sec({od:7,wt:23,bot:2338,top:1753})],
-    notes:"Operator calc: Csg. 5.5\" 20# 2427'-2338' / 7\" 23# 2338'-1753'. Theoretical volume required 140.38 cu ft; actual volume pumped 120.37 cu ft."});
+    secs:[sec({od:7,wt:23,bot:2427,top:2410}),sec({od:5.5,wt:20,bot:2410,top:2338}),sec({od:7,wt:23,bot:2338,top:1753})],
+    notes:"Inner liner #2: 5-1/2\" 20# J-55 2338'-2410' (sand adapter @ 2338'). Operator calc used 5.5\" 20# 2427'-2338' / 7\" 23# 2338'-1753': 140.38 cu ft required, 120.37 cu ft pumped."});
   return s; }
 function save(){ try{ localStorage.setItem('plug-review-1',JSON.stringify(S)); }catch(e){} }
 function loadState(){ try{ const t=localStorage.getItem('plug-review-1'); if(t) return Object.assign(blank(),JSON.parse(t)); }catch(e){} return example(); }
@@ -321,6 +322,8 @@ function calc(src=S.idSrc){
   if(R.vTag&&vol!=null){ R.pctTag=vol/R.vTag*100; R.defTag=100-R.pctTag; }
   if(R.vReq&&vol!=null) R.pctReq=vol/R.vReq*100;
   if(tag!=null&&R.theoTop!=null) R.tagVsTheo=R.theoTop-tag;   // + : tag shallower than the volume can reach
+  if(tag!=null&&tag<bot&&R.theoTop!=null&&!(R.overflow>0)){ R.lenTag=bot-tag; R.lenTheo=bot-R.theoTop; R.defLen=(R.lenTag-R.lenTheo)/R.lenTag*100; } // plug-length method (SOP memo)
+  { const d=[R.defTag,R.defLen].filter(x=>x!=null); R.defMax=d.length?Math.max(...d):null; }
   if(tag!=null&&req!=null) R.tagVsReq=req-tag;                // + : tag above the required top
   return R; }
 
@@ -396,6 +399,8 @@ function renderSecs(){
     <td class="o" data-o="id"></td><td class="o hm" data-o="cf"></td><td class="o hm" data-o="len"></td><td class="o" data-o="v"></td>
     <td>${S.secs.length>1?`<button type="button" class="x noprint" data-del="${i}" aria-label="Remove section">✕</button>`:''}</td></tr>`).join('')+
   `</tbody><tfoot><tr><td colspan="5">Volume required, bottom to tagged TOC</td><td class="hm"></td><td class="o hm" id="sumLen"></td><td class="o" id="sumV"></td><td></td></tr></tfoot>`; }
+function defText(R){ const v=`<b>${f2(Math.abs(R.defTag),1)}%</b> ${R.defTag>0?'deficient':'over'} by volume`;
+  return R.defLen==null?v:`${v} · <b>${f2(Math.abs(R.defLen),1)}%</b> by plug length (SOP)`; }
 function refresh(){
   const R=calc(), alt=calc(S.idSrc==='formula'?'table':'formula'), P=S.permit;
   $('volBbl').textContent=R.vol!=null?f2(R.vol/CF_BBL,2):'–';
@@ -414,37 +419,42 @@ function refresh(){
   $('kpis').innerHTML=
     k('Volume to tagged TOC',R.vTag!=null?f2(R.vTag,2):'–',R.vTag!=null?`ft³ · ${f2(R.vTag/CF_BBL,1)} bbl`:'enter bottom, tag, pipe')+
     k('Pumped',R.vol!=null?f2(R.vol,2):'–',R.vol!=null?`ft³ · ${f2(R.vol/CF_BBL,1)} bbl`:'ft³')+
-    k('% of required',R.pctTag!=null?f2(R.pctTag,1)+'%':'–',R.pctTag!=null?(R.defTag>0?`${f2(R.defTag,1)}% deficient`:`${f2(-R.defTag,1)}% over`):'pumped ÷ volume to tag',R.pctTag!=null?(R.defTag>0?'bad':'ok'):'')+
+    k('% of required',R.pctTag!=null?f2(R.pctTag,1)+'%':'–',R.pctTag!=null?defText(R):'pumped ÷ volume to tag',R.defMax==null?'':R.defMax>=5?'bad':R.defMax>0?'warn':'ok')+
     k('Theoretical TOC',R.theoTop!=null?f0(R.theoTop)+'′':'–',R.theoTop!=null?(R.tagVsTheo!=null?`tag ${f0(Math.abs(R.tagVsTheo))} ft ${R.tagVsTheo>=0?'higher':'lower'}`:'from volume pumped'):'from volume pumped');
   const plain=x=>x==null?'—':String(Math.round(x));
+  const lenTxt=R.defLen!=null?`${f2(Math.abs(R.defLen),1)}% ${R.defLen>0?'deficient':'over'} by plug length, SOP method`:'';
   const csgTxt=R.secs.map(s=>`${odTxt(s.od)}" ${s.wt}# ${plain(s.bot)}'-${plain(R.tag!=null?Math.max(s.top,R.tag):s.top)}'`).join(' / ');
   $('calcText').textContent=[`Permit requires ${R.req!=null?plain(R.req)+"'":'—'}. TOC tagged @ ${R.tag!=null?plain(R.tag)+"'":'—'}.`,
     `Csg. ${csgTxt||'—'} (Calculation Depths)`,
     `Theoretical Volume Required: ${R.vTag!=null?f2(R.vTag,2):'—'} cu ft`,
-    `Actual Volume Pumped: ${R.vol!=null?f2(R.vol,2):'—'} cu ft${R.pctTag!=null?` (${f2(R.pctTag,1)}% of required; ${R.defTag>0?f2(R.defTag,1)+'% deficient':f2(-R.defTag,1)+'% over'})`:''}`].join('\n');
-  // Findings: each line has a bold label and spells out the depths and volumes behind it.
-  const F=[], ft=d=>f0(d)+"'", cf=v=>f2(v,2)+' ft³';
+    `Actual Volume Pumped: ${R.vol!=null?f2(R.vol,2):'—'} cu ft${R.pctTag!=null?` (${f2(R.pctTag,1)}% of required; ${f2(Math.abs(R.defTag),1)}% ${R.defTag>0?'deficient':'over'} by volume)`:''}`,
+    ...(R.defLen!=null?[`Theoretical TOC: ${plain(R.theoTop)}'. Plug length ${plain(R.lenTheo)}' theoretical vs ${plain(R.lenTag)}' tagged (${lenTxt})`]:[])].join('\n');
+  // Findings: short, labelled lines with the depths and volumes behind each.
+  const F=[], ft=d=>f0(d)+"'", cf=v=>f2(v,2)+' ft³', pc=x=>f2(Math.abs(x),1)+'%';
   if(R.tagVsReq!=null) F.push([R.tagVsReq>=0?'':'b','Tag vs permit TOC',
-    `Tagged TOC ${ft(R.tag)} is ${f0(Math.abs(R.tagVsReq))} ft ${R.tagVsReq>=0?'above':'below'} the permit-required TOC of ${ft(R.req)}. ${R.tagVsReq>=0?'Depth requirement met.':'Depth requirement NOT met.'}`]);
-  if(R.vTag!=null&&R.vol!=null) F.push([R.defTag>0?'b':'','Volume, bottom to tagged TOC',
-    `${ft(R.bot)} to ${ft(R.tag)} needs ${cf(R.vTag)}; ${cf(R.vol)} was pumped = ${f2(R.pctTag,1)}% of required (${R.defTag>0?`${f2(R.defTag,1)}% deficient, ${cf(R.vTag-R.vol)} short`:`${f2(-R.defTag,1)}% over, ${cf(R.vol-R.vTag)} extra`}).`]);
+    `Tag ${ft(R.tag)} is ${f0(Math.abs(R.tagVsReq))} ft ${R.tagVsReq>=0?'above':'below'} permit TOC ${ft(R.req)}: depth ${R.tagVsReq>=0?'met':'NOT met'}.`]);
+  if(R.vTag!=null&&R.vol!=null) F.push([R.defTag>0?'b':'','Volume',
+    `${cf(R.vTag)} needed (${ft(R.bot)}–${ft(R.tag)}), ${cf(R.vol)} pumped: ${pc(R.defTag)} ${R.defTag>0?`deficient (${cf(R.vTag-R.vol)} short)`:`over (${cf(R.vol-R.vTag)} extra)`}.`]);
+  if(R.defLen!=null) F.push([R.defLen>0?'b':'','Plug length (SOP)',
+    `Theoretical ${f0(R.lenTheo)} ft (${ft(R.bot)}–${ft(R.theoTop)}) vs tagged ${f0(R.lenTag)} ft: ${pc(R.defLen)} ${R.defLen>0?'deficient':'over'}.`]);
+  if(R.defMax!=null&&R.defMax>=5) F.push(['b','Over 5%','Report to the supervisor for approval or feedback before approving.']);
   if(R.tagVsTheo!=null&&Math.abs(R.tagVsTheo)>=1){
     const zs=(P?P.markers:[]).filter(m=>m.d>=Math.min(R.tag,R.theoTop)&&m.d<=R.bot).map(m=>`${m.name} ${ft(m.d)}`);
-    if(R.tagVsTheo>0) F.push(['w','Tag higher than the volume supports',
-      `Pumped as a solid column from ${ft(R.bot)}, ${cf(R.vol)} reaches only ${ft(R.theoTop)} (theoretical TOC), ${f0(R.tagVsTheo)} ft below the tag. Where the missing cement is cannot be determined: it may be a mud-cut or contaminated top, mud mixed through the column, channeling or voids, a bridge, cement left in the CT, or an under-reported volume.${zs.length?` Isolation across ${zs.join(' and ')} is not confirmed by volume.`:''}`]);
-    else F.push(['b','Tag deeper than the volume supports',
-      `${cf(R.vol)} should reach ${ft(R.theoTop)}, but the tag is ${f0(-R.tagVsTheo)} ft deeper at ${ft(R.tag)}. About ${cf(R.vol-R.vTag)} of the cement pumped is not in the plug: losses to the formation or perforations, a strung-out plug, or channeling.`]); }
-  if(R.vReq!=null&&R.vol!=null) F.push([R.vol<R.vReq?'b':'','Volume, bottom to permit-required TOC',
-    `Filling only from ${ft(R.bot)} up to the permit-required TOC of ${ft(R.req)} needs ${cf(R.vReq)}. The ${cf(R.vol)} pumped is ${f2(R.vol/R.vReq,1)}× that (${f0(R.pctReq)}%)${R.vol<R.vReq?`, so even a perfect solid column would stop ${f0(R.theoTop-R.req)} ft below the permit TOC (at ${ft(R.theoTop)}).`:'.'} This assumes solid cement from the bottom up; it does not show where the cement actually is.`]);
+    if(R.tagVsTheo>0) F.push(['w','Tag above theoretical TOC',
+      `Volume reaches only ${ft(R.theoTop)}, ${f0(R.tagVsTheo)} ft below the tag. Where the shortfall is can't be determined: water-contaminated cement, channeling or voids, a bridge, cement left in the CT, or an under-reported volume.${zs.length?` Isolation across ${zs.join(', ')} not confirmed by volume.`:''}`]);
+    else F.push(['b','Tag below theoretical TOC',
+      `Volume should reach ${ft(R.theoTop)}; tag is ${f0(-R.tagVsTheo)} ft deeper. About ${cf(R.vol-R.vTag)} is not in the plug: losses, strung-out plug or channeling.`]); }
+  if(R.vReq!=null&&R.vol!=null) F.push([R.vol<R.vReq?'b':'','Volume to permit TOC',
+    R.vol<R.vReq?`A solid column to ${ft(R.req)} needs ${cf(R.vReq)}; pumped is only ${f0(R.pctReq)}% of that, so even solid cement would stop at ${ft(R.theoTop)}.`
+               :`A solid column to ${ft(R.req)} needs ${cf(R.vReq)}; pumped is ${f2(R.vol/R.vReq,1)}× that (assumes solid cement from the bottom up).`]);
   if(alt.vTag!=null&&R.vTag!=null&&Math.abs(alt.vTag-R.vTag)>0.01) F.push(['','ID cross-check',
-    `With ${S.idSrc==='formula'?'CWC table':'formula'} IDs: ${cf(alt.vTag)} required to the tag, ${f2(alt.pctTag,1)}% of required, theoretical TOC ${ft(alt.theoTop)}.`]);
-  if(R.overflow>0) F.push(['w','Pipe sections',`The pumped volume is more than the pipe sections entered can hold (${cf(R.overflow)} left over); add the section above.`]);
-  if(P&&R.req!=null){ const m=P.mud?` (≥${P.mud.wt||'–'} lb/ft³${P.mud.gel?`, gel ≥${P.mud.gel} lb/100 ft²`:''})`:'';
+    `${S.idSrc==='formula'?'CWC table':'Formula'} IDs: ${cf(alt.vTag)} needed, ${pc(alt.defTag)} ${alt.defTag>0?'deficient':'over'} by volume${alt.defLen!=null?`, ${pc(alt.defLen)} by plug length`:''}.`]);
+  if(R.overflow>0) F.push(['w','Pipe sections',`Pumped volume exceeds the sections entered by ${cf(R.overflow)}; add the section above.`]);
+  if(P&&R.req!=null){ const m=P.mud?`inert mud (≥${P.mud.wt||'–'} lb/ft³${P.mud.gel?`, gel ≥${P.mud.gel} lb/100 ft²`:''})`:'no cement';
     const above=(P.gaps||[]).find(g=>g[1]>=R.req-5&&g[0]<R.req);
-    if(P.cementAll) F.push(['','Cement all the way up','The permit requires cement in every interval up to surface, with no mud spacers. The hole above this plug must also be cement.']);
-    else if(above) F.push(['','Mud above this plug',
-      `The well is not cemented all the way up. ${P.mud?`The permit fills all portions not plugged with cement with inert mud${m}`:'The permit leaves gaps between the required cement intervals'}, so the hole from ${ft(R.req)} up to ${ft(above[0])} is or may be mud, not cement. Cement tagged above ${ft(R.req)} is beyond what the permit requires.`]);
-    else if(P.mud) F.push(['','Mud between plugs',`The permit fills all portions not plugged with cement with inert mud${m}; the well is not cemented all the way up.`]); }
+    if(P.cementAll) F.push(['','Cement all the way up','Permit requires cement to surface, no mud spacers.']);
+    else if(above) F.push(['','Mud above this plug',`The well is/will not be cemented all the way up: the permit calls for ${m} from ${ft(R.req)} up to ${ft(above[0])}.`]);
+    else if(P.mud) F.push(['','Mud between plugs',`The well is/will not be cemented all the way up: the permit calls for ${m} between plugs.`]); }
   $('findings').innerHTML=F.map(([c,l,t])=>`<div class="${c}"><b>${esc(l)}.</b> ${esc(t)}</div>`).join('');
   renderPermit(); drawWBD(R); }
 function renderPermit(){ const P=S.permit, out=$('permitOut'); if(!P){ out.innerHTML=''; return; }
