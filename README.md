@@ -1,3 +1,4 @@
+[README.md](https://github.com/user-attachments/files/33986494/README.md)
 # Plug Volume Review
 
 A single-page tool for reviewing abandonment cement plugs: pumped volume against theoretical fill, theoretical top of cement against the actual tag, and the permit's requirements. It runs entirely in the browser. Nothing you enter leaves your computer.
@@ -50,19 +51,24 @@ The Assessment panel is a placeholder for the risk matrix. It will set allowable
 
 ## Well list data
 
-The app reads `data/manifest.json` to find the CSV in `data/`:
+The well list is `data/wells_20261022.tsv.gz`, about 5 MB, well under GitHub's 25 MB web-upload limit. It is the CalGEM AllWells export (59 MB) cut down to the 20 columns the app uses, tab-separated and gzip-compressed. `data/manifest.json` names the file:
 
 ```json
-{ "csv": "AllWells_20261022.csv", "asOf": "2026-10-22", "source": "CalGEM AllWells export" }
+{ "file": "wells_20261022.tsv.gz", "asOf": "2026-10-22" }
 ```
 
-The first visit downloads the CSV (about 59 MB; GitHub Pages compresses it in transit), indexes it and caches it in the browser. Later visits load from the cache instantly. When the CSV named in the manifest changes, the app downloads it again.
+The first visit downloads and indexes it (a few seconds) and caches it in the browser. Later visits are instant. When the file named in the manifest changes, the app downloads it again.
 
-**To update the well list:** add the new export to `data/`, change `csv` and `asOf` in `data/manifest.json`, and commit. You can delete the old CSV. GitHub accepts single files up to 100 MB; files over 50 MB trigger a warning on push, which is fine.
+**To update the well list (no Python needed):**
+1. Open the app, click **Load CSV**, and pick the new AllWells CSV export.
+2. Click **Save slim file for GitHub**. This downloads `wells_YYYYMMDD.tsv.gz`.
+3. Upload that file to `data/` in the repository, change `file` and `asOf` in `data/manifest.json`, and delete the old `.gz`.
 
-The app needs these columns: `API, LeaseName, WellNumber, WellStatus, WellTypeLa, OperatorCo, OperatorNa, FieldName, AreaName, CountyName, District, Section, Township, Range, BaseMeridi, Latitude, Longitude, SpudDate, isDirectio, inHPZ`.
+Alternatively, run `python tools/make_wells_gz.py AllWells_YYYYMMDD.csv`.
 
-**Offline or local use:** open `index.html` directly and click **Load CSV** to point it at any AllWells export.
+Columns kept: `API, LeaseName, WellNumber, WellStatus, WellTypeLa, OperatorCo, OperatorNa, FieldName, AreaName, CountyName, District, Section, Township, Range, BaseMeridi, Latitude, Longitude, SpudDate, isDirectio, inHPZ`.
+
+**Offline or local use:** open `index.html` directly and click **Load CSV**. It takes either the full CSV export or the slim `.gz`.
 
 ## Hosting on GitHub Pages
 
