@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Plug Volume Review V1.0_w-log</title>
+<title>Plug Volume Review V3.0</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@75..100,400..800&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <style>
@@ -121,7 +121,7 @@ table.t tfoot td{font-weight:600;border-top:1.5px solid var(--ink);border-bottom
 <body>
 <div class="wrap">
 <header class="top">
-  <h1>Plug Volume Review <span id="ver" style="font-family:var(--mono);font-size:11px;font-weight:500;color:var(--muted);font-stretch:100%">v2026.10.27-1</span></h1>
+  <h1>Plug Volume Review <span id="ver" style="font-family:var(--mono);font-size:11px;font-weight:500;color:var(--muted);font-stretch:100%">v2026.10.27-2</span></h1>
   <div class="bar noprint">
     <button type="button" id="btnNew">New</button>
     <button type="button" id="btnExample">Example (04-029-16337)</button>
@@ -523,7 +523,7 @@ function renderPermit(){ const P=S.permit, out=$('permitOut'); if(!P){ out.inner
 
 /* ---------------- wellbore diagram ---------------- */
 /* ---------------- log: load, crop, match depths, store ---------------- */
-let LOG={id:null,url:null}, LD=null; // LOG = stored log image for S.log; LD = setup-dialog state
+let LOG={id:null,url:null}, LD=null, WB=null, LDRAG=null; // LOG = stored log image for S.log; LD = setup-dialog state
 function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=()=>rej(new Error('could not load '+src.split('/').pop())); document.head.appendChild(s); }); }
 async function fileToCanvas(file,page=1){ // returns {canvas, pages}
   const buf=await file.arrayBuffer(), u=new Uint8Array(buf), name=file.name.toLowerCase();
@@ -604,14 +604,15 @@ async function saveLogSetup(){
   const blob=await new Promise(r=>out.toBlob(r,'image/jpeg',.88)), id='log:'+Date.now().toString(36);
   if(S.log&&S.log.id&&S.log.id!==id) idbDel(S.log.id);
   try{ await idbPut({[id]:blob}); }catch(e){ $('ldHelp').textContent='Could not store the log in this browser: '+e.message; return; }
-  S.log={id,name:LD.name,w:out.width,h:out.height,y1:(y1-crop.y)*k,y2:(y2-crop.y)*k,d1,d2,on:true};
+  S.log={id,name:LD.name,w:out.width,h:out.height,y1:(y1-crop.y)*k,y2:(y2-crop.y)*k,d1,d2,on:true,orig:{d1,d2}};
   setLogUrl(id,blob); $('logDlg').close(); LD=null; save(); logStatus(); refresh(); }
 function setLogUrl(id,blob){ if(LOG.url) URL.revokeObjectURL(LOG.url); LOG={id,url:blob?URL.createObjectURL(blob):null}; }
-async function loadStoredLog(){ if(!S.log){ setLogUrl(null,null); logStatus(); return; } const b=await idbGet(S.log.id); setLogUrl(S.log.id,b||null); logStatus(); refresh(); }
+async function loadStoredLog(){ if(S.log&&!S.log.orig) S.log.orig={d1:S.log.d1,d2:S.log.d2}; if(!S.log){ setLogUrl(null,null); logStatus(); return; } const b=await idbGet(S.log.id); setLogUrl(S.log.id,b||null); logStatus(); refresh(); }
 function logStatus(){ const t=$('logTxt');
   if(!S.log){ t.textContent='PDF, TIFF or image: drop or click'; return; }
   if(!LOG.url){ t.innerHTML=`${esc(S.log.name)} · <span class="bad">not stored in this browser, drop it again</span>`; return; }
-  t.innerHTML=`${esc(S.log.name)} · ${f0(S.log.d1)}′/${f0(S.log.d2)}′ <button type="button" class="lk" id="logAdjust">Adjust</button><button type="button" class="x" id="logClear" title="Remove log" aria-label="Remove log">✕</button>`; }
+  const o=S.log.orig, moved=o&&(Math.abs(o.d1-S.log.d1)>0.5||Math.abs(o.d2-S.log.d2)>0.5);
+  t.innerHTML=`${esc(S.log.name)} · ${f0(S.log.d1)}′/${f0(S.log.d2)}′ <button type="button" class="lk" id="logAdjust">Adjust</button>${moved?'<button type="button" class="lk" id="logReset" title="Put the log back where setup placed it">Reset</button>':''}<button type="button" class="x" id="logClear" title="Remove log" aria-label="Remove log">✕</button>`; }
 async function clearLog(){ if(S.log) await idbDel(S.log.id); S.log=null; setLogUrl(null,null); save(); logStatus(); refresh(); }
 
 function drawWBD(R){
@@ -637,6 +638,11 @@ function drawWBD(R){
     g+=`<image href="${LOG.url}" x="${x0}" y="${y(dT)}" width="${logW}" height="${y(dB)-y(dT)}" preserveAspectRatio="none" clip-path="url(#lclip)"/>`;
     if(R.tag!=null||R.theoTop!=null){ const a=Math.max(d0,R.tag??R.theoTop), b=Math.min(d1,R.bot); if(b>a) g+=`<rect x="${x0}" y="${y(a)}" width="${logW}" height="${y(b)-y(a)}" fill="${C.theo}" opacity=".13" clip-path="url(#lclip)"/><rect x="${x0}" y="${y(a)}" width="3" height="${y(b)-y(a)}" fill="${C.theo}"/>`; }
     g+=`<rect x="${x0}" y="${padT}" width="${logW}" height="${ph}" fill="none" stroke="${C.line}"/>`;
+    // drag the strip to slide the log; drag the bottom grip to stretch it
+    const gy=Math.min(y(dB),H-padB)-9, gx=x0+logW/2;
+    g+=`<rect class="noprint" data-logdrag="move" x="${x0}" y="${padT}" width="${logW}" height="${ph}" fill="transparent" style="cursor:grab;touch-action:none"><title>Drag to slide the log up or down</title></rect>`;
+    if(gy>padT+20) g+=`<g class="noprint" data-logdrag="size" style="cursor:ns-resize;touch-action:none"><title>Drag to stretch or squeeze the log</title><rect x="${gx-22}" y="${gy-5}" width="44" height="16" fill="transparent"/><rect x="${gx-16}" y="${gy}" width="32" height="7" rx="3.5" fill="${C.steel}" opacity=".75"/><path d="M${gx-8} ${gy+2.5}h16M${gx-8} ${gy+4.5}h16" stroke="#fff" stroke-width=".8"/></g>`;
+    WB={d0,d1,H,ph,dT,dB};
     if(dT>d0+1||dB<d1-1) logNote=` · log covers ${f0(Math.max(0,dT))}′–${f0(dB)}′`; }
   const span=d1-d0, step=[10,25,50,100,250,500,1000,2000,5000].find(s=>span/s<=11)||5000;
   for(let d=Math.ceil(d0/step)*step; d<=d1; d+=step) g+=`<line x1="${axW-4}" x2="${W-labW}" y1="${y(d)}" y2="${y(d)}" stroke="${C.line}" stroke-width=".5" stroke-dasharray="2 3"/><text x="${axW-6}" y="${y(d)+3.5}" text-anchor="end" font-size="10" fill="${C.muted}">${d.toLocaleString()}</text>`;
@@ -651,17 +657,18 @@ function drawWBD(R){
   const hl=(d,clr,dash,w=1.6)=>{ if(d!=null&&inR(d)) g+=`<line x1="${axW+10}" x2="${W-labW}" y1="${y(d)}" y2="${y(d)}" stroke="${clr}" stroke-width="${w}" stroke-dasharray="${dash}"/>`; };
   hl(R.req,C.req,'8 3',1.8); hl(R.theoTop,C.theo,'5 3');
   if(R.tag!=null&&inR(R.tag)) g+=`<path d="M${cx-xb-14} ${y(R.tag)} h${2*xb+28}" stroke="${C.steel}" stroke-width="2.4"/><path d="M${cx+xb+16} ${y(R.tag)-6} l-8 6 l8 6" fill="none" stroke="${C.steel}" stroke-width="1.6"/>`;
-  for(const m of marks) if(inR(m.d)) g+=`<line x1="${axW+10}" x2="${W-labW}" y1="${y(m.d)}" y2="${y(m.d)}" stroke="${C.zone}" stroke-width="1.1" stroke-dasharray="7 3"/><text x="${fx+3}" y="${y(m.d)-3}" font-size="10" font-style="italic" font-weight="600" fill="${C.zone}">${esc(m.name)} ${f0(m.d)}′</text>`;
+  for(const m of marks) if(inR(m.d)) g+=`<line x1="${axW+10}" x2="${W-labW}" y1="${y(m.d)}" y2="${y(m.d)}" stroke="${C.zone}" stroke-width="1.1" stroke-dasharray="7 3"/>`;
   if(S.zoom==='well'&&P){ for(const r of P.plugs) g+=`<path d="M${axW+8} ${y(r.top)} h-5 V${y(r.bot)} h5" stroke="${C.req}" stroke-width="2" fill="none"/>`; if(P.cleanout) hl(P.cleanout,C.muted,'2 3',1); }
   const labels=[], lab=(d,t1,t2,c)=>{ if(d!=null&&inR(d)) labels.push({d,t1,t2,c}); };
   lab(R.tag,`Tagged TOC ${f0(R.tag)}′`,R.pctTag!=null?`${f2(R.pctTag,1)}% of required volume`:'','ink');
   lab(R.theoTop,`Theoretical TOC ${f0(R.theoTop)}′`,R.vol!=null?`${f2(R.vol,2)} ft³ pumped`:'','theo');
   lab(R.req,`Permit TOC ${f0(R.req)}′`,'required top','req');
   lab(R.bot,`Bottom ${f0(R.bot)}′`,S.method,'ink');
+  for(const m of marks) lab(m.d,`${m.name} ${f0(m.d)}′`,'','zone');
   for(let i=0;i<secs.length-1;i++){ const a=secs[i], b=secs[i+1]; lab(a.top,`${odTxt(b.od)}″ ${b.wt}# / ${odTxt(a.od)}″ ${a.wt}#`,`crossover ${f0(a.top)}′`,'muted'); }
   labels.sort((a,b)=>a.d-b.d); let last=-1e9,lh=0; const lx=W-labW+8;
-  for(const L of labels){ let ly=Math.max(y(L.d),last+lh); ly=Math.min(ly,H-padB-4); last=ly; lh=L.t2?24:14; const c={ink:C.steel,theo:C.theo,req:C.req,muted:C.muted}[L.c];
-    g+=`<path d="M${cx+xb+6} ${y(L.d)} L${lx-4} ${ly}" stroke="${C.muted}" stroke-width=".7" fill="none"/><text x="${lx}" y="${ly-1}" font-size="10.5" font-weight="600" fill="${c}">${esc(L.t1)}</text>`;
+  for(const L of labels){ let ly=Math.max(y(L.d),last+lh); ly=Math.min(ly,H-padB-4); last=ly; lh=L.t2?24:14; const c={ink:C.steel,theo:C.theo,req:C.req,muted:C.muted,zone:C.zone}[L.c], it=L.c==='zone';
+    g+=`<path d="M${cx+xb+6} ${y(L.d)} L${lx-4} ${ly}" stroke="${it?C.zone:C.muted}" stroke-width=".7" fill="none"/><text x="${lx}" y="${ly-1}" font-size="10.5" font-weight="600"${it?' font-style="italic"':''} fill="${c}">${esc(L.t1)}</text>`;
     if(L.t2) g+=`<text x="${lx}" y="${ly+10}" font-size="9.5" fill="${C.muted}">${esc(L.t2)}</text>`; }
   wrap.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Plug diagram to depth scale" style="font-family:var(--body);max-width:100%;height:auto">${g}</svg>`;
   $('diagHint').textContent=`${f2((d1-d0)/(H-padT-padB),1)} ft/px · width not to scale${logNote}`; $('logSeg').hidden=!(S.log&&LOG.url); $('logToggle').setAttribute('aria-pressed',String(logOn));
@@ -711,7 +718,7 @@ function bind(){
   $('csvPick').onclick=()=>$('csvFile').click(); $('slimSave').onclick=saveSlim;
   $('csvFile').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; $('dataStat').textContent=`Reading ${f.name}…`; try{ const isCsv=!/\.gz$/i.test(f.name); await useCached(await buildFromText(await bytesToText(await f.arrayBuffer()),f.name,isCsv)); $('slimSave').hidden=!isCsv; if(isCsv) $('slimSave').textContent='Save slim file for GitHub'; }catch(err){ $('dataStat').innerHTML=`<span class="bad">Could not read ${esc(f.name)}: ${esc(err.message)}</span>`; } e.target.value=''; };
   const ld=$('logDrop'), lf=$('logFile');
-  ld.onclick=e=>{ if(e.target.closest('#logAdjust')){ e.stopPropagation(); openLogSetup(null,S.log); return; } if(e.target.closest('#logClear')){ e.stopPropagation(); clearLog(); return; } lf.click(); };
+  ld.onclick=e=>{ if(e.target.closest('#logReset')){ e.stopPropagation(); Object.assign(S.log,S.log.orig); save(); logStatus(); refresh(); return; } if(e.target.closest('#logAdjust')){ e.stopPropagation(); openLogSetup(null,S.log); return; } if(e.target.closest('#logClear')){ e.stopPropagation(); clearLog(); return; } lf.click(); };
   ld.onkeydown=e=>{ if(e.target===ld&&(e.key==='Enter'||e.key===' ')){ e.preventDefault(); lf.click(); } };
   lf.onchange=()=>{ if(lf.files[0]) openLogSetup(lf.files[0]); lf.value=''; };
   ['dragenter','dragover'].forEach(v=>ld.addEventListener(v,e=>{ e.preventDefault(); ld.classList.add('over'); }));
@@ -719,6 +726,16 @@ function bind(){
   ld.addEventListener('drop',e=>{ const f=e.dataTransfer.files[0]; if(f) openLogSetup(f); });
   $('logToggle').onclick=()=>{ if(!S.log) return; S.log.on=S.log.on===false; save(); refresh(); };
   bindLogSetup();
+  $('wbd').addEventListener('pointerdown',e=>{ const h=e.target.closest('[data-logdrag]'); if(!h||!S.log||!WB) return; e.preventDefault();
+    const L=S.log, k=(L.d2-L.d1)/(L.y2-L.y1), A=Math.max(WB.dT,WB.d0), B=Math.min(WB.dB,WB.d1);
+    LDRAG={kind:h.dataset.logdrag, y0:e.clientY, sc:WB.H/$('wbd').querySelector('svg').getBoundingClientRect().height, ftpx:(WB.d1-WB.d0)/WB.ph,
+      d1:L.d1, d2:L.d2, A, pA:L.y1+(A-L.d1)/k, B, pB:L.y1+(B-L.d1)/k};
+    document.body.style.cursor=LDRAG.kind==='move'?'grabbing':'ns-resize'; });
+  window.addEventListener('pointermove',e=>{ if(!LDRAG) return; const D=LDRAG, L=S.log, dft=(e.clientY-D.y0)*D.sc*D.ftpx;
+    if(D.kind==='move'){ L.d1=D.d1+dft; L.d2=D.d2+dft; }
+    else { const k2=(D.B+dft-D.A)/(D.pB-D.pA); if(k2<=0.02*Math.abs((D.d2-D.d1)/(L.y2-L.y1))) return; L.d1=D.A+(L.y1-D.pA)*k2; L.d2=D.A+(L.y2-D.pA)*k2; }
+    drawWBD(calc()); logStatus(); });
+  window.addEventListener('pointerup',()=>{ if(!LDRAG) return; LDRAG=null; document.body.style.cursor=''; save(); logStatus(); });
   const drop=$('drop'), pf=$('pdfFile');
   drop.onclick=()=>pf.click(); drop.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); pf.click(); } };
   pf.onchange=()=>{ if(pf.files[0]) readPermit(pf.files[0]); pf.value=''; };
