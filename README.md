@@ -1,4 +1,4 @@
-[README_v1-wlog.md](https://github.com/user-attachments/files/34049905/README_v1-wlog.md)
+[README_v2_wlog.md](https://github.com/user-attachments/files/34052703/README_v2_wlog.md)
 # Plug Volume Review 3.0
 
 A single-page tool for reviewing abandonment cement plugs: pumped volume against theoretical fill, theoretical top of cement against the actual tag, and the permit's requirements. It runs entirely in the browser. Nothing you enter leaves your computer.
@@ -52,7 +52,7 @@ Built for the witnessing engineer reviewing **one plug at a time**. **Example (0
   1. **Crop to tracks:** drag a box around the SP and resistivity tracks, leaving out the header and any notes.
   2. **Match depths:** two lines come pre-labelled with the plug top (tag) and plug bottom. Drag each onto the log at that depth. You can edit the depths if a nearby printed depth is easier to match.
 
-  The log then shows as a strip to the left of the diagram, at the same depth scale, with the plug interval shaded. It prints with the diagram. **Log** in the diagram header shows or hides it, **Adjust** reopens the setup, and ✕ removes it. The log image is stored in this browser only; Export JSON does not include it.
+  The log then shows as a strip to the left of the diagram, at the same depth scale, with the plug interval shaded. It prints with the diagram. While reviewing, drag the log strip to slide it up or down, and drag the grip at its bottom edge to stretch or squeeze it. Both are saved; **Reset** puts the log back where setup placed it. **Log** in the diagram header shows or hides it, **Adjust** reopens the setup, and ✕ removes it. The log image is stored in this browser only; Export JSON does not include it.
 - **Notes, Copy summary, Export/Import JSON, Print / PDF.**
 
 ## Assessment (next step)
