@@ -1,4 +1,4 @@
-[README_v2.md](https://github.com/user-attachments/files/33990208/README_v2.md)
+[README_v3.md](https://github.com/user-attachments/files/33993631/README_v3.md)
 # Plug Volume Review
 
 A single-page tool for reviewing abandonment cement plugs: pumped volume against theoretical fill, theoretical top of cement against the actual tag, and the permit's requirements. It runs entirely in the browser. Nothing you enter leaves your computer.
@@ -37,7 +37,7 @@ Built for the witnessing engineer reviewing **one plug at a time**. **Example (0
   A toggle switches to the CWC Technical Data Book IDs. Operators usually calculate with table IDs, so the other result is always shown as well.
 - **Deficiency, two ways.**
   - **By volume** (quick field check): 1 − pumped ÷ volume from the bottom to the tagged TOC.
-  - **By plug length** (SOP memo method): (tagged length − theoretical length) ÷ tagged length, where the theoretical length runs from the bottom to the TOC the pumped volume reaches.
+  - **By plug length** (memo method): (tagged length − theoretical length) ÷ tagged length, where the theoretical length runs from the bottom to the TOC the pumped volume reaches.
 
   They are equal when the plug is all one pipe size, and can differ across a crossover or liner. The % box shows both. At 5% or more by either method, a finding says to report to the supervisor for approval or feedback before approving the plug. That applies to all plug types.
 - **Results.**
