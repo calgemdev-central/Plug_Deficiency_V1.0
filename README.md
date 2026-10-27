@@ -1,4 +1,4 @@
-[README_v3.md](https://github.com/user-attachments/files/33993631/README_v3.md)
+[README_v1-wlog.md](https://github.com/user-attachments/files/34049905/README_v1-wlog.md)
 # Plug Volume Review 3.0
 
 A single-page tool for reviewing abandonment cement plugs: pumped volume against theoretical fill, theoretical top of cement against the actual tag, and the permit's requirements. It runs entirely in the browser. Nothing you enter leaves your computer.
@@ -48,6 +48,11 @@ Built for the witnessing engineer reviewing **one plug at a time**. **Example (0
   - Shows pipe sections and crossovers, cement for the volume pumped, and a hatch where the tag is above the theoretical TOC.
   - Draws permit TOC, theoretical TOC and zone-top lines.
   - Shows mud spacer fill when the permit calls for mud.
+- **Log beside the diagram.** Drop a log (PDF, TIFF or any image, including a phone photo) on the **Log** box next to the permit box. A setup window opens:
+  1. **Crop to tracks:** drag a box around the SP and resistivity tracks, leaving out the header and any notes.
+  2. **Match depths:** two lines come pre-labelled with the plug top (tag) and plug bottom. Drag each onto the log at that depth. You can edit the depths if a nearby printed depth is easier to match.
+
+  The log then shows as a strip to the left of the diagram, at the same depth scale, with the plug interval shaded. It prints with the diagram. **Log** in the diagram header shows or hides it, **Adjust** reopens the setup, and ✕ removes it. The log image is stored in this browser only; Export JSON does not include it.
 - **Notes, Copy summary, Export/Import JSON, Print / PDF.**
 
 ## Assessment (next step)
