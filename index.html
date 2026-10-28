@@ -55,6 +55,10 @@ button:hover{border-color:var(--accent)} button.x{padding:0 6px;color:var(--mute
 .chip.yes{background:var(--bad-soft);color:var(--bad);border-color:transparent} .chip.no{background:var(--ok-soft);color:var(--ok);border-color:transparent} .chip.unc{background:var(--warn-soft);color:var(--warn);border-color:transparent}
 .drop{border:1.5px dashed var(--line);border-radius:5px;padding:5px 8px;font-size:12px;color:var(--muted);cursor:pointer;display:flex;gap:8px;align-items:center}
 .drop.over,.drop:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.credit{margin-top:12px;padding-top:6px;border-top:1px solid var(--line);font-size:11px;font-weight:600;letter-spacing:.03em;color:var(--ink);text-align:right}
+@media print{.credit{margin-top:6px;font-size:9.5px;color:#000}}
+.upd{display:flex;gap:10px;align-items:center;justify-content:space-between;background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn);border-radius:6px;padding:5px 10px;margin-bottom:8px;font-size:12.5px;font-weight:600}
+.upd button{border-color:var(--warn);color:var(--warn);font-weight:600}
 .drops{display:grid;grid-template-columns:1.25fr 1fr;gap:6px} .drop span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .drop .x,.drop .lk{flex:none}
 .drop .lk{border:none;background:none;color:var(--accent);padding:0 2px;font-size:12px;text-decoration:underline}
 @media (max-width:700px){.drops{grid-template-columns:1fr}}
@@ -121,7 +125,7 @@ table.t tfoot td{font-weight:600;border-top:1.5px solid var(--ink);border-bottom
 <body>
 <div class="wrap">
 <header class="top">
-  <h1>Plug Volume Review <span id="ver" style="font-family:var(--mono);font-size:11px;font-weight:500;color:var(--muted);font-stretch:100%">v2026.10.27-2</span></h1>
+  <h1>Plug Volume Review <span id="ver" style="font-family:var(--mono);font-size:11px;font-weight:500;color:var(--muted);font-stretch:100%">v2026.10.28-2</span></h1>
   <div class="bar noprint">
     <button type="button" id="btnNew">New</button>
     <button type="button" id="btnExample">Example (04-029-16337)</button>
@@ -133,6 +137,7 @@ table.t tfoot td{font-weight:600;border-top:1.5px solid var(--ink);border-bottom
   <div class="datastat noprint"><span id="dataStat">Loading well list…</span> <button type="button" id="csvPick" title="Load an AllWells CSV export (or a slim .tsv.gz) from your computer">Load CSV</button><button type="button" id="slimSave" hidden title="Download the compressed well list to upload to the repository's data folder">Save slim file for GitHub</button><input type="file" id="csvFile" accept=".csv,.tsv,.gz,text/csv" hidden></div>
 </header>
 
+<div class="upd noprint" id="updBar" role="status" hidden><span id="updTxt"></span><button type="button" id="updBtn">Reload now</button></div>
 <div class="grid">
 <div class="stack">
   <section class="panel">
@@ -212,6 +217,7 @@ table.t tfoot td{font-weight:600;border-top:1.5px solid var(--ink);border-bottom
   </section>
 </div>
 </div>
+<footer class="credit">S. Siddhu | SOGE | Central</footer>
 </div>
 
 <dialog id="logDlg" aria-label="Set up log">
@@ -747,6 +753,13 @@ function bind(){
 S=loadState(); bind(); rerender(); if(S.permit) $('dropTxt').textContent=`${S.permit.file} · drop another to replace`;
 loadStoredLog();
 loadWellList();
+// Browsers may keep an older copy of this page for a while; check the published version and offer a reload.
+async function checkForUpdate(){ if(location.protocol==='file:') return;
+  try{ const r=await fetch(location.pathname.replace(/\/$/,'/index.html'),{cache:'reload'}); if(!r.ok) return;
+    const live=((await r.text()).match(/id="ver"[^>]*>\s*(v[\w.\-]+)/)||[])[1], mine=$('ver').textContent.trim();
+    if(live&&live!==mine){ $('updTxt').textContent=`A newer version (${live}) is available. You are on ${mine}.`; $('updBar').hidden=false; } }catch(e){} }
+$('updBtn').onclick=()=>location.reload();
+checkForUpdate(); setInterval(checkForUpdate,30*60*1000);
 </script>
 </body>
 </html>
