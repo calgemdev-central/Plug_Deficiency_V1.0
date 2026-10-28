@@ -55,6 +55,22 @@ button:hover{border-color:var(--accent)} button.x{padding:0 6px;color:var(--mute
 .chip.yes{background:var(--bad-soft);color:var(--bad);border-color:transparent} .chip.no{background:var(--ok-soft);color:var(--ok);border-color:transparent} .chip.unc{background:var(--warn-soft);color:var(--warn);border-color:transparent}
 .drop{border:1.5px dashed var(--line);border-radius:5px;padding:5px 8px;font-size:12px;color:var(--muted);cursor:pointer;display:flex;gap:8px;align-items:center}
 .drop.over,.drop:hover{border-color:var(--accent);color:var(--accent);background:var(--accent-soft)}
+.credit{font-family:var(--body);font-size:11px;font-weight:700;letter-spacing:.03em;color:var(--ink);font-stretch:100%;white-space:nowrap;margin-left:8px;display:inline-block}
+.upd{display:flex;gap:10px;align-items:center;justify-content:space-between;background:var(--warn-soft);color:var(--warn);border:1px solid var(--warn);border-radius:6px;padding:5px 10px;margin-bottom:8px;font-size:12.5px;font-weight:600}
+.upd button{border-color:var(--warn);color:var(--warn);font-weight:600}
+.drops{display:grid;grid-template-columns:1.25fr 1fr;gap:6px} .drop span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap} .drop .x,.drop .lk{flex:none}
+.drop .lk{border:none;background:none;color:var(--accent);padding:0 2px;font-size:12px;text-decoration:underline}
+@media (max-width:700px){.drops{grid-template-columns:1fr}}
+dialog#logDlg{width:min(760px,96vw);max-height:92vh;padding:0;border:1px solid var(--line);border-radius:8px;background:var(--surface);color:var(--ink);display:none;flex-direction:column}
+dialog#logDlg[open]{display:flex} dialog#logDlg::backdrop{background:rgba(10,16,20,.55)}
+.ldh{display:flex;flex-wrap:wrap;gap:6px 10px;align-items:center;padding:8px 10px;border-bottom:1px solid var(--line)}
+.ldh h3{margin:0;font-family:var(--display);font-stretch:85%;font-size:15px}
+.ldh .f{flex-direction:row;align-items:center;gap:5px;text-transform:none;letter-spacing:0;font-size:11.5px}
+.ldh input{width:78px} .sw{display:inline-block;width:14px;height:3px;border-radius:2px;vertical-align:middle}
+.ldb{overflow:auto;flex:1;background:var(--surface-2);padding:8px;min-height:200px}
+.ldwrap{position:relative;margin:0 auto;touch-action:none} .ldwrap canvas{display:block;width:100%;height:auto} .ldwrap svg{position:absolute;inset:0;width:100%;height:100%}
+.ldf{display:flex;gap:6px;align-items:center;justify-content:space-between;padding:8px 10px;border-top:1px solid var(--line);font-size:11.5px;color:var(--muted)}
+.ldf .btns{display:flex;gap:6px;flex:none} .ldf button{white-space:nowrap} .ldf .pri{background:var(--accent);border-color:var(--accent);color:#fff}
 .kv{display:grid;grid-template-columns:auto 1fr auto 1fr;gap:2px 10px;font-size:12px;margin-top:5px}
 @media (max-width:700px){.kv{grid-template-columns:auto 1fr}}
 .kv dt{color:var(--muted);white-space:nowrap} .kv dd{margin:0;min-width:0} .kv dd.wide{grid-column:2 / -1}
@@ -108,7 +124,7 @@ table.t tfoot td{font-weight:600;border-top:1.5px solid var(--ink);border-bottom
 <body>
 <div class="wrap">
 <header class="top">
-  <h1>Plug Volume Review <span id="ver" style="font-family:var(--mono);font-size:11px;font-weight:500;color:var(--muted);font-stretch:100%">v2026.10.26-9</span></h1>
+  <h1>Plug Volume Review <span id="ver" style="font-family:var(--mono);font-size:11px;font-weight:500;color:var(--muted);font-stretch:100%">v2026.10.28-3</span> <span class="credit">S. Siddhu | SOGE | Central</span></h1>
   <div class="bar noprint">
     <button type="button" id="btnNew">New</button>
     <button type="button" id="btnExample">Example (04-029-16337)</button>
@@ -120,6 +136,7 @@ table.t tfoot td{font-weight:600;border-top:1.5px solid var(--ink);border-bottom
   <div class="datastat noprint"><span id="dataStat">Loading well list…</span> <button type="button" id="csvPick" title="Load an AllWells CSV export (or a slim .tsv.gz) from your computer">Load CSV</button><button type="button" id="slimSave" hidden title="Download the compressed well list to upload to the repository's data folder">Save slim file for GitHub</button><input type="file" id="csvFile" accept=".csv,.tsv,.gz,text/csv" hidden></div>
 </header>
 
+<div class="upd noprint" id="updBar" role="status" hidden><span id="updTxt"></span><button type="button" id="updBtn">Reload now</button></div>
 <div class="grid">
 <div class="stack">
   <section class="panel">
@@ -141,8 +158,12 @@ table.t tfoot td{font-weight:600;border-top:1.5px solid var(--ink);border-bottom
   </section>
 
   <section class="panel">
-    <div class="drop noprint" id="drop" tabindex="0" role="button" aria-label="Choose or drop permit PDF"><b>Permit</b><span id="dropTxt">Drop the Permit to Conduct Well Operations PDF here, or click to choose</span></div>
+    <div class="drops noprint">
+      <div class="drop" id="drop" tabindex="0" role="button" aria-label="Choose or drop permit PDF"><b>Permit</b><span id="dropTxt">PDF: drop here or click</span></div>
+      <div class="drop" id="logDrop" tabindex="0" role="button" aria-label="Choose or drop a log: PDF, TIFF or image"><b>Log</b><span id="logTxt">PDF, TIFF or image: drop or click</span></div>
+    </div>
     <input type="file" id="pdfFile" accept="application/pdf" hidden>
+    <input type="file" id="logFile" accept="application/pdf,image/*,.tif,.tiff" hidden>
     <div id="permitOut"></div>
     <label class="f" style="margin-top:5px">Squeeze information from permit<textarea id="sqzBox" rows="1" data-k="sqzText"></textarea></label>
   </section>
@@ -180,7 +201,7 @@ table.t tfoot td{font-weight:600;border-top:1.5px solid var(--ink);border-bottom
 
 <div class="side stack">
   <section class="panel">
-    <h2>Wellbore <span class="hint" id="diagHint"></span><span class="seg noprint" style="margin-left:auto" role="group" aria-label="Diagram range"><button type="button" data-zoom="plug">Plug</button><button type="button" data-zoom="well">Whole well</button></span></h2>
+    <h2>Wellbore <span class="hint" id="diagHint"></span><span class="seg noprint" style="margin-left:auto" role="group" aria-label="Log track" id="logSeg" hidden><button type="button" id="logToggle" aria-pressed="true">Log</button></span><span class="seg noprint" role="group" aria-label="Diagram range"><button type="button" data-zoom="plug">Plug</button><button type="button" data-zoom="well">Whole well</button></span></h2>
     <div id="wbd"></div>
     <div class="legend" id="legend"></div>
   </section>
@@ -196,6 +217,19 @@ table.t tfoot td{font-weight:600;border-top:1.5px solid var(--ink);border-bottom
 </div>
 </div>
 </div>
+
+<dialog id="logDlg" aria-label="Set up log">
+  <div class="ldh">
+    <h3 id="ldTitle">Set up log</h3>
+    <span class="seg" role="group" aria-label="Setup step"><button type="button" data-lm="crop">1 · Crop to tracks</button><button type="button" data-lm="depth">2 · Match depths</button></span>
+    <label class="f" id="ldPageBox" hidden>Page <select id="ldPage"></select></label>
+    <span class="seg" role="group" aria-label="Zoom"><button type="button" id="ldZoomOut" aria-label="Zoom out">−</button><button type="button" id="ldZoomIn" aria-label="Zoom in">+</button></span>
+    <label class="f"><i class="sw" style="background:var(--theo)"></i>Top, ft<input type="number" id="ldD1" step="1"></label>
+    <label class="f"><i class="sw" style="background:var(--req)"></i>Bottom, ft<input type="number" id="ldD2" step="1"></label>
+  </div>
+  <div class="ldb" id="ldBody"><div class="ldwrap" id="ldWrap"><canvas id="ldCanvas"></canvas><svg id="ldSvg"></svg></div></div>
+  <div class="ldf"><span id="ldHelp"></span><span class="btns"><button type="button" id="ldCancel">Cancel</button><button type="button" class="pri" id="ldSave">Save log</button></span></div>
+</dialog>
 
 <script>
 /* ---------------- constants & formulas ---------------- */
@@ -262,6 +296,7 @@ async function buildFromText(text,label,keepSlim=false){
   const codes={}; for (const op in opCodes) codes[op]=[...opCodes[op]];
   const meta={label,count:n,ops:ops.length,loaded:new Date().toISOString()};
   await idbPut({...chunks,ops,codes,meta,fields:WF.slice(1)}); return meta; }
+async function idbDel(k){ try{ const db=await idb(); await new Promise(res=>{ const tx=db.transaction('kv','readwrite'); tx.objectStore('kv').delete(k); tx.oncomplete=res; tx.onerror=res; }); }catch(e){} }
 let DATA={ready:false,ops:[],codes:{},fields:WF.slice(1)};
 async function loadWellList(){
   const st=$('dataStat'); let manifest=null;
@@ -301,7 +336,7 @@ let S, sid=1;
 const sec=(o={})=>({id:'s'+(sid++)+'_'+Math.random().toString(36).slice(2,6),od:7,wt:23,bot:'',top:'',...o});
 function blank(){ return {api:'',permitNo:'',operator:'',lease:'',wellNo:'',field:'',county:'',str:'',hpz:'',bfw:'',date:'',well:null,apiMsg:'',
   type:'Bottom / hydrocarbon plug (covers perfs)',method:'Coiled tubing (CT)',desc:'',bot:'',reqTop:'',reqAuto:false,tag:'',vol:'',tagBy:'CT / tubing',tagWt:'',witness:'',
-  secs:[sec({od:7,wt:23})],idSrc:'formula',zoom:'plug',permit:null,sqzText:'',sqzEdited:false,notes:''}; }
+  secs:[sec({od:7,wt:23})],idSrc:'formula',zoom:'plug',permit:null,log:null,sqzText:'',sqzEdited:false,notes:''}; }
 function example(){ const s=blank(); // operator-reported values for API 04-029-16337, permit 7056780
   Object.assign(s,{api:'0402916337',permitNo:'7056780',operator:'E & B Natural Resources Management Corporation',lease:'Section 9',wellNo:'4-6',field:'Poso Creek',county:'Kern',str:'09-28S-27E',hpz:'Yes',
     type:'Bottom / hydrocarbon plug (covers perfs)',method:'Coiled tubing (CT)',desc:"Etchegoin 2352', Chanac 2469'",bot:2427,reqTop:2143,tag:1753,vol:120.37,
@@ -491,6 +526,99 @@ function renderPermit(){ const P=S.permit, out=$('permitOut'); if(!P){ out.inner
   </dl>`; }
 
 /* ---------------- wellbore diagram ---------------- */
+/* ---------------- log: load, crop, match depths, store ---------------- */
+let LOG={id:null,url:null}, LD=null, WB=null, LDRAG=null; // LOG = stored log image for S.log; LD = setup-dialog state
+function loadScript(src){ return new Promise((res,rej)=>{ const s=document.createElement('script'); s.src=src; s.onload=res; s.onerror=()=>rej(new Error('could not load '+src.split('/').pop())); document.head.appendChild(s); }); }
+async function fileToCanvas(file,page=1){ // returns {canvas, pages}
+  const buf=await file.arrayBuffer(), u=new Uint8Array(buf), name=file.name.toLowerCase();
+  const fit=(w,h)=>Math.min(1,2400/w,14000/h), mk=(w,h)=>{ const c=document.createElement('canvas'); c.width=w; c.height=h; return c; };
+  if(u[0]===0x25&&u[1]===0x50&&u[2]===0x44&&u[3]===0x46){ // %PDF
+    await loadPdfJs(); const pdf=await pdfjsLib.getDocument({data:u}).promise, pg=await pdf.getPage(Math.min(page,pdf.numPages)), v1=pg.getViewport({scale:1});
+    const sc=Math.min(2400/v1.width,14000/v1.height,4), v=pg.getViewport({scale:sc}), c=mk(Math.round(v.width),Math.round(v.height));
+    await pg.render({canvasContext:c.getContext('2d'),viewport:v}).promise; return {canvas:c,pages:pdf.numPages}; }
+  if((u[0]===0x49&&u[1]===0x49)||(u[0]===0x4d&&u[1]===0x4d)||/\.tiff?$/.test(name)){ // TIFF
+    if(!window.pako) await loadScript('https://cdnjs.cloudflare.com/ajax/libs/pako/1.0.11/pako.min.js');
+    if(!window.UTIF) await loadScript('https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js');
+    const ifds=UTIF.decode(buf), f=ifds[Math.min(page,ifds.length)-1]; UTIF.decodeImage(buf,f,ifds); const rgba=UTIF.toRGBA8(f);
+    const src=mk(f.width,f.height); src.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(rgba.buffer,0,f.width*f.height*4),f.width,f.height),0,0);
+    const k=fit(f.width,f.height); if(k===1) return {canvas:src,pages:ifds.length};
+    const c=mk(Math.round(f.width*k),Math.round(f.height*k)); c.getContext('2d').drawImage(src,0,0,c.width,c.height); return {canvas:c,pages:ifds.length}; }
+  const bmp=await createImageBitmap(new Blob([u],{type:file.type||'image/png'})), k=fit(bmp.width,bmp.height), c=mk(Math.round(bmp.width*k),Math.round(bmp.height*k));
+  c.getContext('2d').drawImage(bmp,0,0,c.width,c.height); return {canvas:c,pages:1}; }
+function plugWindow(){ const R=calc(); return {top:R.tag??R.theoTop??R.req??null, bot:R.bot??null}; } // plug max and min depths
+async function openLogSetup(file,existing){
+  $('logTxt').textContent=`Reading ${file?file.name:'log'}…`;
+  try{
+    let canvas,pages=1,name;
+    if(file){ ({canvas,pages}=await fileToCanvas(file)); name=file.name; }
+    else { const img=new Image(); img.src=LOG.url; await img.decode(); canvas=document.createElement('canvas'); canvas.width=img.naturalWidth; canvas.height=img.naturalHeight; canvas.getContext('2d').drawImage(img,0,0); name=S.log.name; }
+    const w=canvas.width,h=canvas.height, pw=plugWindow();
+    LD={file,name,canvas,pages,page:1,mode:file?'crop':'depth',zoom:1,crop:{x:0,y:0,w,h},
+        y1:existing?existing.y1:Math.round(h*.3), y2:existing?existing.y2:Math.round(h*.7),
+        d1:existing?existing.d1:pw.top, d2:existing?existing.d2:pw.bot};
+    $('ldPageBox').hidden=pages<2; $('ldPage').innerHTML=Array.from({length:pages},(_,i)=>`<option value="${i+1}">${i+1}</option>`).join('');
+    $('ldD1').value=LD.d1??''; $('ldD2').value=LD.d2??''; $('ldTitle').textContent=`Set up log · ${name}`;
+    renderLogSetup(); $('logDlg').showModal(); fitLogZoom();
+  }catch(e){ $('logTxt').textContent=`Could not read ${file?file.name:'log'}: ${e.message}`; return; }
+  logStatus(); }
+function fitLogZoom(){ if(!LD) return; const bw=$('ldBody').clientWidth-16; LD.base=Math.min(LD.canvas.width,Math.max(240,bw)); applyLogZoom(); }
+function applyLogZoom(){ $('ldWrap').style.width=Math.round(LD.base*LD.zoom)+'px'; }
+function renderLogSetup(){
+  const c=$('ldCanvas'), {canvas,crop,mode}=LD, w=canvas.width,h=canvas.height;
+  c.width=w; c.height=h; c.getContext('2d').drawImage(canvas,0,0);
+  const sw=Math.max(2,w/400), dim=`rgba(10,16,20,.45)`;
+  let g=`<path d="M0 0H${w}V${h}H0Z M${crop.x} ${crop.y}v${crop.h}h${crop.w}v${-crop.h}Z" fill="${dim}" fill-rule="evenodd"/>`;
+  g+=`<rect x="${crop.x}" y="${crop.y}" width="${crop.w}" height="${crop.h}" fill="none" stroke="#fff" stroke-width="${sw*1.5}" stroke-dasharray="${sw*5} ${sw*3}"/>`;
+  if(mode==='depth'){ const css=getComputedStyle(document.documentElement);
+    for(const [yy,dd,clr] of [[LD.y1,LD.d1,css.getPropertyValue('--theo')],[LD.y2,LD.d2,css.getPropertyValue('--req')]]){
+      g+=`<line x1="${crop.x}" x2="${crop.x+crop.w}" y1="${yy}" y2="${yy}" stroke="${clr}" stroke-width="${sw*1.6}"/><rect x="${crop.x}" y="${yy-sw*11}" width="${sw*52}" height="${sw*10}" fill="${clr}"/><text x="${crop.x+sw*3}" y="${yy-sw*3.5}" font-size="${sw*7.5}" font-family="sans-serif" font-weight="700" fill="#fff">${dd!=null?f0(dd)+"'":'set depth'}</text>`; } }
+  $('ldSvg').setAttribute('viewBox',`0 0 ${w} ${h}`); $('ldSvg').innerHTML=g;
+  document.querySelectorAll('[data-lm]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.lm===mode)));
+  $('ldHelp').textContent=mode==='crop'?'Drag a box around the SP and resistivity tracks (leave out the header and notes). Then go to step 2.'
+    :'Drag each line onto the log at its depth: top line at the plug top, bottom line at the plug bottom. Edit the depths above if a nearby printed depth is easier.'; }
+function bindLogSetup(){
+  const svg=$('ldSvg'); let drag=null;
+  const pt=e=>{ const r=svg.getBoundingClientRect(); return {x:(e.clientX-r.left)/r.width*LD.canvas.width, y:(e.clientY-r.top)/r.height*LD.canvas.height}; };
+  svg.addEventListener('pointerdown',e=>{ if(!LD) return; e.preventDefault(); svg.setPointerCapture(e.pointerId); const p=pt(e);
+    if(LD.mode==='crop') drag={k:'crop',x:p.x,y:p.y};
+    else { drag={k:Math.abs(p.y-LD.y1)<=Math.abs(p.y-LD.y2)?'y1':'y2'}; LD[drag.k]=Math.round(p.y); renderLogSetup(); } });
+  svg.addEventListener('pointermove',e=>{ if(!drag) return; const p=pt(e), W=LD.canvas.width,H=LD.canvas.height, cl=(v,a,b)=>Math.max(a,Math.min(b,v));
+    if(drag.k==='crop'){ const x=cl(p.x,0,W), y=cl(p.y,0,H); LD.crop={x:Math.min(x,drag.x),y:Math.min(y,drag.y),w:Math.abs(x-drag.x),h:Math.abs(y-drag.y)}; }
+    else LD[drag.k]=Math.round(cl(p.y,0,H));
+    renderLogSetup(); });
+  svg.addEventListener('pointerup',()=>{ if(drag&&drag.k==='crop'&&(LD.crop.w<20||LD.crop.h<20)) LD.crop={x:0,y:0,w:LD.canvas.width,h:LD.canvas.height};
+    if(drag&&drag.k==='crop'){ const c=LD.crop; if(LD.y1<c.y||LD.y1>c.y+c.h) LD.y1=Math.round(c.y+c.h*.3); if(LD.y2<c.y||LD.y2>c.y+c.h) LD.y2=Math.round(c.y+c.h*.7); }
+    drag=null; renderLogSetup(); });
+  document.querySelectorAll('[data-lm]').forEach(b=>b.onclick=()=>{ LD.mode=b.dataset.lm; renderLogSetup(); });
+  $('ldZoomIn').onclick=()=>{ LD.zoom=Math.min(6,LD.zoom*1.4); applyLogZoom(); };
+  $('ldZoomOut').onclick=()=>{ LD.zoom=Math.max(.4,LD.zoom/1.4); applyLogZoom(); };
+  $('ldD1').oninput=e=>{ LD.d1=num(e.target.value); renderLogSetup(); };
+  $('ldD2').oninput=e=>{ LD.d2=num(e.target.value); renderLogSetup(); };
+  $('ldPage').onchange=async e=>{ const r=await fileToCanvas(LD.file,+e.target.value); LD.canvas=r.canvas; LD.crop={x:0,y:0,w:r.canvas.width,h:r.canvas.height}; renderLogSetup(); fitLogZoom(); };
+  $('ldCancel').onclick=()=>{ $('logDlg').close(); LD=null; logStatus(); };
+  $('logDlg').addEventListener('cancel',()=>{ LD=null; setTimeout(logStatus); });
+  $('ldSave').onclick=saveLogSetup; }
+async function saveLogSetup(){
+  const {canvas,crop}=LD; let {y1,y2,d1,d2}=LD;
+  if(d1==null||d2==null||d1===d2){ $('ldHelp').textContent='Enter two different depths for the lines.'; return; }
+  if(Math.abs(y2-y1)<5){ $('ldHelp').textContent='Move the two lines apart, onto their depths on the log.'; return; }
+  if((y2-y1)*(d2-d1)<0){ $('ldHelp').textContent='The deeper depth must be on the lower line.'; return; }
+  const k=Math.min(1,600/crop.w,6000/crop.h), out=document.createElement('canvas'); out.width=Math.round(crop.w*k); out.height=Math.round(crop.h*k);
+  const cx=out.getContext('2d'); cx.fillStyle='#fff'; cx.fillRect(0,0,out.width,out.height); cx.drawImage(canvas,crop.x,crop.y,crop.w,crop.h,0,0,out.width,out.height);
+  const blob=await new Promise(r=>out.toBlob(r,'image/jpeg',.88)), id='log:'+Date.now().toString(36);
+  if(S.log&&S.log.id&&S.log.id!==id) idbDel(S.log.id);
+  try{ await idbPut({[id]:blob}); }catch(e){ $('ldHelp').textContent='Could not store the log in this browser: '+e.message; return; }
+  S.log={id,name:LD.name,w:out.width,h:out.height,y1:(y1-crop.y)*k,y2:(y2-crop.y)*k,d1,d2,on:true,orig:{d1,d2}};
+  setLogUrl(id,blob); $('logDlg').close(); LD=null; save(); logStatus(); refresh(); }
+function setLogUrl(id,blob){ if(LOG.url) URL.revokeObjectURL(LOG.url); LOG={id,url:blob?URL.createObjectURL(blob):null}; }
+async function loadStoredLog(){ if(S.log&&!S.log.orig) S.log.orig={d1:S.log.d1,d2:S.log.d2}; if(!S.log){ setLogUrl(null,null); logStatus(); return; } const b=await idbGet(S.log.id); setLogUrl(S.log.id,b||null); logStatus(); refresh(); }
+function logStatus(){ const t=$('logTxt');
+  if(!S.log){ t.textContent='PDF, TIFF or image: drop or click'; return; }
+  if(!LOG.url){ t.innerHTML=`${esc(S.log.name)} · <span class="bad">not stored in this browser, drop it again</span>`; return; }
+  const o=S.log.orig, moved=o&&(Math.abs(o.d1-S.log.d1)>0.5||Math.abs(o.d2-S.log.d2)>0.5);
+  t.innerHTML=`${esc(S.log.name)} · ${f0(S.log.d1)}′/${f0(S.log.d2)}′ <button type="button" class="lk" id="logAdjust">Adjust</button>${moved?'<button type="button" class="lk" id="logReset" title="Put the log back where setup placed it">Reset</button>':''}<button type="button" class="x" id="logClear" title="Remove log" aria-label="Remove log">✕</button>`; }
+async function clearLog(){ if(S.log) await idbDel(S.log.id); S.log=null; setLogUrl(null,null); save(); logStatus(); refresh(); }
+
 function drawWBD(R){
   const wrap=$('wbd'), secs=R.secs, P=S.permit;
   if(!secs.length||R.bot==null){ wrap.innerHTML='<p class="info">Enter the plug bottom and the pipe sections to draw the plug.</p>'; $('legend').innerHTML=''; $('diagHint').textContent=''; return; }
@@ -498,15 +626,28 @@ function drawWBD(R){
   let d0,d1;
   if(S.zoom==='plug'){ const lo=Math.min(...tops), hi=Math.max(R.bot,...secs.map(s=>s.bot),...marks.filter(m=>m.d<R.bot+300).map(m=>m.d)); const pad=Math.max(30,(hi-lo)*0.1); d0=Math.max(0,lo-pad); d1=hi+pad; }
   else { d0=0; d1=Math.max(R.bot,...secs.map(s=>s.bot),...(P?[P.cleanout||0,...P.plugs.map(p=>p.bot),...marks.map(m=>m.d)]:[]))*1.04; }
-  const W=Math.max(320,Math.min(600,wrap.clientWidth||420)), H=Math.max(440,Math.min(960,window.innerHeight-110)), padT=12,padB=10,axW=48,labW=172;
-  const maxDia=Math.max(...secs.map(s=>s.od))*1.9, cx=axW+10+(W-axW-10-labW)/2, half=(W-axW-10-labW)/2-4, px=half/(maxDia/2);
+  const W=Math.max(320,Math.min(600,wrap.clientWidth||420)), H=Math.max(440,Math.min(960,window.innerHeight-110)), padT=12,padB=10,axW=48,labW=W<480?122:172;
+  const logOn=!!(S.log&&S.log.on!==false&&LOG.url&&LOG.id===S.log.id), x0=axW+10, logW=logOn?Math.round(Math.max(96,Math.min(170,W*0.3))):0, fx=x0+(logOn?logW+6:0);
+  const maxDia=Math.max(...secs.map(s=>s.od))*1.9, cx=fx+(W-fx-labW)/2, half=(W-fx-labW)/2-4, px=half/(maxDia/2);
   const y=d=>padT+(H-padT-padB)*(d-d0)/(d1-d0), xr=d=>d/2*px, inR=d=>d>=d0&&d<=d1;
   const css=getComputedStyle(document.documentElement), col=n=>css.getPropertyValue(n).trim();
   const C={form:col('--form'),mud:col('--mud'),spacer:col('--mudspacer'),steel:col('--ink'),plug:col('--plug'),theo:col('--theo'),req:col('--req'),muted:col('--muted'),line:col('--line'),zone:col('--zone'),bad:col('--bad')};
   let g=`<defs><pattern id="dots" width="5" height="5" patternUnits="userSpaceOnUse"><rect width="5" height="5" fill="${C.plug}"/><circle cx="1.5" cy="1.5" r=".8" fill="${C.steel}" opacity=".5"/></pattern>
    <pattern id="gap" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="${C.mud}"/><line x1="0" y1="0" x2="0" y2="6" stroke="${C.bad}" stroke-width="1.2"/></pattern>
    <pattern id="mudp" width="7" height="7" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><rect width="7" height="7" fill="${C.mud}"/><line x1="0" y1="0" x2="0" y2="7" stroke="${C.spacer}" stroke-width="1.6"/></pattern></defs>`;
-  g+=`<rect x="${axW+10}" y="${padT}" width="${W-axW-10-labW}" height="${H-padT-padB}" fill="${C.form}"/>`;
+  g+=`<rect x="${fx}" y="${padT}" width="${W-fx-labW}" height="${H-padT-padB}" fill="${C.form}"/>`;
+  let logNote='';
+  if(logOn){ const L=S.log, k=(L.d2-L.d1)/(L.y2-L.y1), dT=L.d1-L.y1*k, dB=L.d1+(L.h-L.y1)*k, ph=H-padT-padB;   // depth at the image's top and bottom edges
+    g+=`<defs><clipPath id="lclip"><rect x="${x0}" y="${padT}" width="${logW}" height="${ph}"/></clipPath></defs><rect x="${x0}" y="${padT}" width="${logW}" height="${ph}" fill="#fff"/>`;
+    g+=`<image href="${LOG.url}" x="${x0}" y="${y(dT)}" width="${logW}" height="${y(dB)-y(dT)}" preserveAspectRatio="none" clip-path="url(#lclip)"/>`;
+    if(R.tag!=null||R.theoTop!=null){ const a=Math.max(d0,R.tag??R.theoTop), b=Math.min(d1,R.bot); if(b>a) g+=`<rect x="${x0}" y="${y(a)}" width="${logW}" height="${y(b)-y(a)}" fill="${C.theo}" opacity=".13" clip-path="url(#lclip)"/><rect x="${x0}" y="${y(a)}" width="3" height="${y(b)-y(a)}" fill="${C.theo}"/>`; }
+    g+=`<rect x="${x0}" y="${padT}" width="${logW}" height="${ph}" fill="none" stroke="${C.line}"/>`;
+    // drag the strip to slide the log; drag the bottom grip to stretch it
+    const gy=Math.min(y(dB),H-padB)-9, gx=x0+logW/2;
+    g+=`<rect class="noprint" data-logdrag="move" x="${x0}" y="${padT}" width="${logW}" height="${ph}" fill="transparent" style="cursor:grab;touch-action:none"><title>Drag to slide the log up or down</title></rect>`;
+    if(gy>padT+20) g+=`<g class="noprint" data-logdrag="size" style="cursor:ns-resize;touch-action:none"><title>Drag to stretch or squeeze the log</title><rect x="${gx-22}" y="${gy-5}" width="44" height="16" fill="transparent"/><rect x="${gx-16}" y="${gy}" width="32" height="7" rx="3.5" fill="${C.steel}" opacity=".75"/><path d="M${gx-8} ${gy+2.5}h16M${gx-8} ${gy+4.5}h16" stroke="#fff" stroke-width=".8"/></g>`;
+    WB={d0,d1,H,ph,dT,dB};
+    if(dT>d0+1||dB<d1-1) logNote=` · log covers ${f0(Math.max(0,dT))}′–${f0(dB)}′`; }
   const span=d1-d0, step=[10,25,50,100,250,500,1000,2000,5000].find(s=>span/s<=11)||5000;
   for(let d=Math.ceil(d0/step)*step; d<=d1; d+=step) g+=`<line x1="${axW-4}" x2="${W-labW}" y1="${y(d)}" y2="${y(d)}" stroke="${C.line}" stroke-width=".5" stroke-dasharray="2 3"/><text x="${axW-6}" y="${y(d)+3.5}" text-anchor="end" font-size="10" fill="${C.muted}">${d.toLocaleString()}</text>`;
   const fillSec=(a,b,fill,op=1)=>{ for(const s of secs){ const t=Math.max(a,s.top,d0), u=Math.min(b,s.bot,d1); if(u>t) g+=`<rect x="${cx-xr(s.id)}" y="${y(t)}" width="${2*xr(s.id)}" height="${y(u)-y(t)}" fill="${fill}" opacity="${op}"/>`; } };
@@ -520,21 +661,22 @@ function drawWBD(R){
   const hl=(d,clr,dash,w=1.6)=>{ if(d!=null&&inR(d)) g+=`<line x1="${axW+10}" x2="${W-labW}" y1="${y(d)}" y2="${y(d)}" stroke="${clr}" stroke-width="${w}" stroke-dasharray="${dash}"/>`; };
   hl(R.req,C.req,'8 3',1.8); hl(R.theoTop,C.theo,'5 3');
   if(R.tag!=null&&inR(R.tag)) g+=`<path d="M${cx-xb-14} ${y(R.tag)} h${2*xb+28}" stroke="${C.steel}" stroke-width="2.4"/><path d="M${cx+xb+16} ${y(R.tag)-6} l-8 6 l8 6" fill="none" stroke="${C.steel}" stroke-width="1.6"/>`;
-  for(const m of marks) if(inR(m.d)) g+=`<line x1="${axW+10}" x2="${W-labW}" y1="${y(m.d)}" y2="${y(m.d)}" stroke="${C.zone}" stroke-width="1.1" stroke-dasharray="7 3"/><text x="${axW+13}" y="${y(m.d)-3}" font-size="10" font-style="italic" font-weight="600" fill="${C.zone}">${esc(m.name)} ${f0(m.d)}′</text>`;
+  for(const m of marks) if(inR(m.d)) g+=`<line x1="${axW+10}" x2="${W-labW}" y1="${y(m.d)}" y2="${y(m.d)}" stroke="${C.zone}" stroke-width="1.1" stroke-dasharray="7 3"/>`;
   if(S.zoom==='well'&&P){ for(const r of P.plugs) g+=`<path d="M${axW+8} ${y(r.top)} h-5 V${y(r.bot)} h5" stroke="${C.req}" stroke-width="2" fill="none"/>`; if(P.cleanout) hl(P.cleanout,C.muted,'2 3',1); }
   const labels=[], lab=(d,t1,t2,c)=>{ if(d!=null&&inR(d)) labels.push({d,t1,t2,c}); };
   lab(R.tag,`Tagged TOC ${f0(R.tag)}′`,R.pctTag!=null?`${f2(R.pctTag,1)}% of required volume`:'','ink');
   lab(R.theoTop,`Theoretical TOC ${f0(R.theoTop)}′`,R.vol!=null?`${f2(R.vol,2)} ft³ pumped`:'','theo');
   lab(R.req,`Permit TOC ${f0(R.req)}′`,'required top','req');
   lab(R.bot,`Bottom ${f0(R.bot)}′`,S.method,'ink');
+  for(const m of marks) lab(m.d,`${m.name} ${f0(m.d)}′`,'','zone');
   for(let i=0;i<secs.length-1;i++){ const a=secs[i], b=secs[i+1]; lab(a.top,`${odTxt(b.od)}″ ${b.wt}# / ${odTxt(a.od)}″ ${a.wt}#`,`crossover ${f0(a.top)}′`,'muted'); }
   labels.sort((a,b)=>a.d-b.d); let last=-1e9,lh=0; const lx=W-labW+8;
-  for(const L of labels){ let ly=Math.max(y(L.d),last+lh); ly=Math.min(ly,H-padB-4); last=ly; lh=L.t2?24:14; const c={ink:C.steel,theo:C.theo,req:C.req,muted:C.muted}[L.c];
-    g+=`<path d="M${cx+xb+6} ${y(L.d)} L${lx-4} ${ly}" stroke="${C.muted}" stroke-width=".7" fill="none"/><text x="${lx}" y="${ly-1}" font-size="10.5" font-weight="600" fill="${c}">${esc(L.t1)}</text>`;
+  for(const L of labels){ let ly=Math.max(y(L.d),last+lh); ly=Math.min(ly,H-padB-4); last=ly; lh=L.t2?24:14; const c={ink:C.steel,theo:C.theo,req:C.req,muted:C.muted,zone:C.zone}[L.c], it=L.c==='zone';
+    g+=`<path d="M${cx+xb+6} ${y(L.d)} L${lx-4} ${ly}" stroke="${it?C.zone:C.muted}" stroke-width=".7" fill="none"/><text x="${lx}" y="${ly-1}" font-size="10.5" font-weight="600"${it?' font-style="italic"':''} fill="${c}">${esc(L.t1)}</text>`;
     if(L.t2) g+=`<text x="${lx}" y="${ly+10}" font-size="9.5" fill="${C.muted}">${esc(L.t2)}</text>`; }
   wrap.innerHTML=`<svg viewBox="0 0 ${W} ${H}" width="${W}" height="${H}" role="img" aria-label="Plug diagram to depth scale" style="font-family:var(--body);max-width:100%;height:auto">${g}</svg>`;
-  $('diagHint').textContent=`${f2((d1-d0)/(H-padT-padB),1)} ft/px · width not to scale`;
-  $('legend').innerHTML=`<span><i style="background:radial-gradient(circle,var(--ink) .8px,var(--plug) 1px) 0 0/5px 5px"></i>Cement (volume pumped)</span><span><i style="background:repeating-linear-gradient(45deg,var(--mud) 0 3px,var(--bad) 3px 4px)"></i>Tagged above theoretical TOC</span>${P&&P.mud?`<span><i style="background:repeating-linear-gradient(-45deg,var(--mud) 0 4px,var(--mudspacer) 4px 5.5px)"></i>Mud spacer</span>`:''}<span><i style="border:none;border-top:2px dashed var(--theo);height:2px;vertical-align:3px"></i>Theoretical TOC</span><span><i style="border:none;border-top:2px dashed var(--req);height:2px;vertical-align:3px"></i>Permit TOC</span><span><i style="border:none;border-top:2px dashed var(--zone);height:2px;vertical-align:3px"></i>Zone top</span>`; }
+  $('diagHint').textContent=`${f2((d1-d0)/(H-padT-padB),1)} ft/px · width not to scale${logNote}`; $('logSeg').hidden=!(S.log&&LOG.url); $('logToggle').setAttribute('aria-pressed',String(logOn));
+  $('legend').innerHTML=`<span><i style="background:radial-gradient(circle,var(--ink) .8px,var(--plug) 1px) 0 0/5px 5px"></i>Cement (volume pumped)</span><span><i style="background:repeating-linear-gradient(45deg,var(--mud) 0 3px,var(--bad) 3px 4px)"></i>Tagged above theoretical TOC</span>${P&&P.mud?`<span><i style="background:repeating-linear-gradient(-45deg,var(--mud) 0 4px,var(--mudspacer) 4px 5.5px)"></i>Mud spacer</span>`:''}<span><i style="border:none;border-top:2px dashed var(--theo);height:2px;vertical-align:3px"></i>Theoretical TOC</span><span><i style="border:none;border-top:2px dashed var(--req);height:2px;vertical-align:3px"></i>Permit TOC</span><span><i style="border:none;border-top:2px dashed var(--zone);height:2px;vertical-align:3px"></i>Zone top</span>${logOn?`<span><i style="background:color-mix(in srgb,var(--theo) 18%,#fff);border-left:3px solid var(--theo)"></i>Plug interval on log</span>`:''}`; }
 
 /* ---------------- summary ---------------- */
 function summary(){ const R=calc(), P=S.permit, L=[];
@@ -567,18 +709,37 @@ function bind(){
     if(b.dataset.ids){ S.idSrc=b.dataset.ids; save(); fillForm(); refresh(); }
     if(b.dataset.zoom){ S.zoom=b.dataset.zoom; save(); fillForm(); refresh(); }
     if(b.dataset.del!=null&&b.closest('#secTbl')){ S.secs.splice(+b.dataset.del,1); save(); rerender(); }
-    if(b.id==='permitClear'){ S.permit=null; if(!S.sqzEdited) S.sqzText=''; save(); fillForm(); refresh(); $('dropTxt').textContent='Drop the Permit to Conduct Well Operations PDF here, or click to choose'; } });
+    if(b.id==='permitClear'){ S.permit=null; if(!S.sqzEdited) S.sqzText=''; save(); fillForm(); refresh(); $('dropTxt').textContent='PDF: drop here or click'; } });
   $('addSec').onclick=()=>{ const last=S.secs[S.secs.length-1]; if(last&&last.topAuto){ last.top=''; last.topAuto=false; } S.secs.push(sec({od:7,wt:23,bot:'',top:S.tag||'',topAuto:true})); save(); rerender(); };
-  $('btnNew').onclick=()=>{ S=blank(); save(); rerender(); $('dropTxt').textContent='Drop the Permit to Conduct Well Operations PDF here, or click to choose'; };
-  $('btnExample').onclick=()=>{ S=example(); save(); rerender(); lookup(S.api); };
+  $('btnNew').onclick=()=>{ if(S.log) idbDel(S.log.id); S=blank(); save(); setLogUrl(null,null); logStatus(); rerender(); $('dropTxt').textContent='PDF: drop here or click'; };
+  $('btnExample').onclick=()=>{ if(S.log) idbDel(S.log.id); S=example(); save(); setLogUrl(null,null); logStatus(); rerender(); lookup(S.api); };
   $('btnCopy').onclick=async()=>{ const t=summary(); try{ await navigator.clipboard.writeText(t); }catch(e){ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); } $('btnCopy').textContent='Copied'; setTimeout(()=>$('btnCopy').textContent='Copy summary',1500); };
   $('btnExport').onclick=()=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([JSON.stringify({...S,well:undefined},null,2)],{type:'application/json'})); a.download=`plug_${normAPI(S.api)?'04'+normAPI(S.api):'well'}_${S.bot||''}.json`; a.click(); setTimeout(()=>URL.revokeObjectURL(a.href),2000); };
   $('btnImport').onclick=()=>$('jsonFile').click();
-  $('jsonFile').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; try{ S=Object.assign(blank(),JSON.parse(await f.text())); save(); rerender(); lookup(S.api); }catch(err){ $('dataStat').textContent='Could not import: '+err.message; } e.target.value=''; };
+  $('jsonFile').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; try{ S=Object.assign(blank(),JSON.parse(await f.text())); save(); rerender(); loadStoredLog(); lookup(S.api); }catch(err){ $('dataStat').textContent='Could not import: '+err.message; } e.target.value=''; };
   $('btnPrint').onclick=()=>window.print();
   $('calcCopy').onclick=async()=>{ const t=$('calcText').textContent; try{ await navigator.clipboard.writeText(t); }catch(e){ const ta=document.createElement('textarea'); ta.value=t; document.body.appendChild(ta); ta.select(); document.execCommand('copy'); ta.remove(); } $('calcCopy').textContent='Copied'; setTimeout(()=>$('calcCopy').textContent='Copy',1500); };
   $('csvPick').onclick=()=>$('csvFile').click(); $('slimSave').onclick=saveSlim;
   $('csvFile').onchange=async e=>{ const f=e.target.files[0]; if(!f) return; $('dataStat').textContent=`Reading ${f.name}…`; try{ const isCsv=!/\.gz$/i.test(f.name); await useCached(await buildFromText(await bytesToText(await f.arrayBuffer()),f.name,isCsv)); $('slimSave').hidden=!isCsv; if(isCsv) $('slimSave').textContent='Save slim file for GitHub'; }catch(err){ $('dataStat').innerHTML=`<span class="bad">Could not read ${esc(f.name)}: ${esc(err.message)}</span>`; } e.target.value=''; };
+  const ld=$('logDrop'), lf=$('logFile');
+  ld.onclick=e=>{ if(e.target.closest('#logReset')){ e.stopPropagation(); Object.assign(S.log,S.log.orig); save(); logStatus(); refresh(); return; } if(e.target.closest('#logAdjust')){ e.stopPropagation(); openLogSetup(null,S.log); return; } if(e.target.closest('#logClear')){ e.stopPropagation(); clearLog(); return; } lf.click(); };
+  ld.onkeydown=e=>{ if(e.target===ld&&(e.key==='Enter'||e.key===' ')){ e.preventDefault(); lf.click(); } };
+  lf.onchange=()=>{ if(lf.files[0]) openLogSetup(lf.files[0]); lf.value=''; };
+  ['dragenter','dragover'].forEach(v=>ld.addEventListener(v,e=>{ e.preventDefault(); ld.classList.add('over'); }));
+  ['dragleave','drop'].forEach(v=>ld.addEventListener(v,e=>{ e.preventDefault(); ld.classList.remove('over'); }));
+  ld.addEventListener('drop',e=>{ const f=e.dataTransfer.files[0]; if(f) openLogSetup(f); });
+  $('logToggle').onclick=()=>{ if(!S.log) return; S.log.on=S.log.on===false; save(); refresh(); };
+  bindLogSetup();
+  $('wbd').addEventListener('pointerdown',e=>{ const h=e.target.closest('[data-logdrag]'); if(!h||!S.log||!WB) return; e.preventDefault();
+    const L=S.log, k=(L.d2-L.d1)/(L.y2-L.y1), A=Math.max(WB.dT,WB.d0), B=Math.min(WB.dB,WB.d1);
+    LDRAG={kind:h.dataset.logdrag, y0:e.clientY, sc:WB.H/$('wbd').querySelector('svg').getBoundingClientRect().height, ftpx:(WB.d1-WB.d0)/WB.ph,
+      d1:L.d1, d2:L.d2, A, pA:L.y1+(A-L.d1)/k, B, pB:L.y1+(B-L.d1)/k};
+    document.body.style.cursor=LDRAG.kind==='move'?'grabbing':'ns-resize'; });
+  window.addEventListener('pointermove',e=>{ if(!LDRAG) return; const D=LDRAG, L=S.log, dft=(e.clientY-D.y0)*D.sc*D.ftpx;
+    if(D.kind==='move'){ L.d1=D.d1+dft; L.d2=D.d2+dft; }
+    else { const k2=(D.B+dft-D.A)/(D.pB-D.pA); if(k2<=0.02*Math.abs((D.d2-D.d1)/(L.y2-L.y1))) return; L.d1=D.A+(L.y1-D.pA)*k2; L.d2=D.A+(L.y2-D.pA)*k2; }
+    drawWBD(calc()); logStatus(); });
+  window.addEventListener('pointerup',()=>{ if(!LDRAG) return; LDRAG=null; document.body.style.cursor=''; save(); logStatus(); });
   const drop=$('drop'), pf=$('pdfFile');
   drop.onclick=()=>pf.click(); drop.onkeydown=e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); pf.click(); } };
   pf.onchange=()=>{ if(pf.files[0]) readPermit(pf.files[0]); pf.value=''; };
@@ -588,7 +749,15 @@ function bind(){
   window.addEventListener('resize',()=>refresh());
 }
 S=loadState(); bind(); rerender(); if(S.permit) $('dropTxt').textContent=`${S.permit.file} · drop another to replace`;
+loadStoredLog();
 loadWellList();
+// Browsers may keep an older copy of this page for a while; check the published version and offer a reload.
+async function checkForUpdate(){ if(location.protocol==='file:') return;
+  try{ const r=await fetch(location.pathname.replace(/\/$/,'/index.html'),{cache:'reload'}); if(!r.ok) return;
+    const live=((await r.text()).match(/id="ver"[^>]*>\s*(v[\w.\-]+)/)||[])[1], mine=$('ver').textContent.trim();
+    if(live&&live!==mine){ $('updTxt').textContent=`A newer version (${live}) is available. You are on ${mine}.`; $('updBar').hidden=false; } }catch(e){} }
+$('updBtn').onclick=()=>location.reload();
+checkForUpdate(); setInterval(checkForUpdate,30*60*1000);
 </script>
 </body>
 </html>
